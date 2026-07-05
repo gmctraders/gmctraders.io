@@ -489,6 +489,45 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .empty-state{text-align:center;color:var(--slate);font-size:13px;padding:38px 10px;}
 .empty-state .glyph{font-size:26px;display:block;margin-bottom:10px;opacity:0.5;}
 
+/* ============ LOGIC CHIP PICKER (tap-to-select, no typing) ============ */
+.hint-inline{font-size:9.5px;color:var(--slate-dim);text-transform:none;letter-spacing:0.02em;font-weight:500;margin-left:6px;}
+.logic-check-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;margin-bottom:14px;}
+.logic-chip{
+  display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:100px;font-size:12px;font-weight:600;
+  background:rgba(255,255,255,0.03);border:1px solid var(--steel);color:var(--slate);cursor:pointer;
+  transition:all .18s cubic-bezier(.2,.8,.2,1);user-select:none;
+}
+.logic-chip:hover{border-color:var(--steel-hi);color:var(--platinum);}
+.logic-chip-dot{width:6px;height:6px;border-radius:50%;background:var(--slate-dim);flex-shrink:0;transition:background .18s ease;}
+.logic-chip.checked{background:rgba(52,232,160,0.14);border-color:rgba(52,232,160,0.5);color:var(--bronze-bright);box-shadow:0 0 0 1px rgba(52,232,160,0.15);}
+.logic-chip.checked .logic-chip-dot{background:var(--neon-green);box-shadow:0 0 6px var(--neon-green);}
+
+/* ============ STRATEGY TYPE BADGE ============ */
+.strat-type{font-size:9px;font-weight:800;letter-spacing:0.08em;padding:3px 8px;border-radius:7px;border:1px solid;display:inline-block;margin-bottom:6px;margin-right:6px;text-transform:uppercase;}
+.strat-logic-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+
+/* ============ ORDER BOOK ============ */
+.trade-badge.pending{background:rgba(47,227,255,0.14);color:var(--neon-cyan);box-shadow:inset 0 0 0 1px rgba(47,227,255,0.3);}
+.order-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-win{background:transparent;border-color:var(--win);color:var(--win);}
+.btn-win:hover{background:rgba(62,207,142,0.1);}
+.btn-loss{background:transparent;border-color:var(--loss);color:var(--loss);}
+.btn-loss:hover{background:rgba(226,89,107,0.1);}
+
+/* ============ CONFLUENCE SCORE ============ */
+.confluence-row{display:flex;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--steel);}
+.confluence-row:last-child{border-bottom:none;}
+.confluence-label{width:180px;flex-shrink:0;font-size:12.5px;color:var(--platinum);font-weight:600;}
+.confluence-bar-wrap{flex:1;height:8px;border-radius:100px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.confluence-bar{height:100%;border-radius:100px;transition:width .6s cubic-bezier(.16,.9,.2,1);}
+.confluence-stats{width:120px;flex-shrink:0;text-align:right;font-family:'IBM Plex Mono',monospace;}
+.confluence-stats b{display:block;font-size:14px;color:var(--platinum);}
+.confluence-stats span{font-size:9.5px;color:var(--slate);}
+@media(max-width:600px){
+  .confluence-label{width:110px;font-size:11px;}
+  .confluence-stats{width:90px;}
+}
+
 .overlay{position:fixed;inset:0;background:rgba(2,3,6,0.82);backdrop-filter:blur(5px);
   display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
 .overlay.show{display:flex;}
@@ -806,6 +845,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a3 3 0 013 3v13H7a3 3 0 01-3-3z"/><path d="M8 9h9M8 13h9"/></svg>
         Journal
       </button>
+      <button class="side-navbtn" data-view="orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l2 4H7z"/><path d="M5 7h14l-1.2 12.2A2 2 0 0115.8 21H8.2a2 2 0 01-2-1.8z"/><path d="M9 12h6"/></svg>
+        Order Book
+      </button>
       <button class="side-navbtn" data-view="playbook">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
         Playbook
@@ -978,6 +1021,12 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           </div>
         </div>
       </div>
+
+      <div class="card tilt" style="margin-top:18px">
+        <h2>Confluence <span class="accent">Score</span><span class="eyebrow">which logic actually wins for you</span></h2>
+        <div class="hint" style="margin-bottom:14px">Every logic tag you've selected on a closed trade, ranked by win rate. This is your real edge — not what you think works, but what the numbers say works.</div>
+        <div id="confluenceList"></div>
+      </div>
     </div>
 
     <!-- CALENDAR -->
@@ -1037,6 +1086,47 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </div>
     </div>
 
+    <!-- ORDER BOOK: pre-executed trade journal -->
+    <div class="view" id="view-orders">
+      <div class="topbar-row">
+        <div>
+          <h2 class="page-title">Order Book</h2>
+          <div class="page-sub">Place the order first. Confirm win or loss once it's closed.</div>
+        </div>
+        <div class="topbar-actions">
+          <select class="trader-filter" id="globalTraderFilter5" onchange="onTraderFilterChange()"></select>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="card tilt">
+          <h2>Place <span class="accent">Order</span><span class="eyebrow">pre-executed</span></h2>
+          <div class="row2">
+            <div class="field"><label>Trader</label><select id="o_trader"></select></div>
+            <div class="field"><label>Strategy</label><select id="o_strategy" onchange="onOrderStrategyChange()"></select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Direction</label>
+              <select id="o_direction">
+                <option value="buy">Buy / Long</option>
+                <option value="sell">Sell / Short</option>
+              </select>
+            </div>
+            <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="e.g. 2"></div>
+          </div>
+          <div class="field">
+            <label>Logic behind this order <span class="hint-inline">tap what applies</span></label>
+            <div class="logic-check-grid" id="orderLogicChoices"></div>
+          </div>
+          <div class="field"><label>Notes</label><textarea id="o_notes" placeholder="Setup context, level, timeframe..."></textarea></div>
+          <button class="btn btn-primary btn-block" onclick="placeOrder()">Place Order</button>
+        </div>
+        <div class="card tilt">
+          <h2>Pending <span class="accent">Orders</span><span class="eyebrow" id="ordersCount"></span></h2>
+          <div class="trade-list" id="ordersList"><div class="empty-state"><span class="glyph">🎫</span>No pending orders. Place one to start tracking it.</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- PLAYBOOK -->
     <div class="view" id="view-playbook">
       <div class="topbar-row">
@@ -1071,6 +1161,20 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
             </select>
           </div>
           <div class="field"><label>Default risk (%)</label><input type="number" step="0.1" min="0" id="pb_stratRisk" placeholder="e.g. 1"></div>
+        </div>
+        <div class="field">
+          <label>Strategy type</label>
+          <select id="pb_stratType" onchange="renderPbLogicChoices()">
+            <option value="gmc">Ghost Money Concepts (GMC) — default</option>
+            <option value="smc">Smart Money Concepts (SMC)</option>
+            <option value="ict">ICT Concepts</option>
+            <option value="ta">Technical Analysis</option>
+            <option value="fundamentals">Fundamentals</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Logic concepts used <span class="hint-inline">tap to select, no typing</span></label>
+          <div class="logic-check-grid" id="pbLogicChoices"></div>
         </div>
         <div class="field"><label>Entry rules / notes</label><textarea id="pb_stratNotes" placeholder="What has to be true for you to take this setup?"></textarea></div>
         <button class="btn btn-primary" onclick="addStrategy()">Add Strategy to Playbook</button>
@@ -1212,6 +1316,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </div>
     </div>
     <div class="field">
+      <label>Logic used for this trade <span class="hint-inline">tap what applied</span></label>
+      <div class="logic-check-grid" id="tradeLogicChoices"></div>
+    </div>
+    <div class="field">
       <label>Result</label>
       <select id="t_result" onchange="onResultChange()">
         <option value="win">Win</option>
@@ -1245,7 +1353,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const DEFAULT_STATE = {
   rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
-  psychology:{ why:"", monk:"", strategies:[], traders:[] },
+  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[] },
   trades:[],
   streak:{ count:0, lastGoodDate:null },
   day:{ date:null, tradesCount:0, lossUsed:0, ruleBrokenToday:false },
@@ -1255,6 +1363,7 @@ const DEFAULT_STATE = {
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let currentUser = null;
 let pendingViolation = false;
+let closingOrderId = null;
 let authMode = 'signin';
 let calViewDate = new Date();
 let activeTraderFilter = 'all';
@@ -1262,6 +1371,68 @@ const STRAT_TAG_COLORS = {
   breakout:'#2fe3ff', reversal:'#e2596b', trend:'#3ecf8e', scalp:'#8b90a0', news:'#8ff7cf', range:'#565b6c'
 };
 const STREAK_MILESTONES = [3,7,14,30,60,100];
+
+/* ============ STRATEGY TYPES & LOGIC LIBRARY ============ */
+const STRATEGY_TYPES = {
+  gmc: { label:'Ghost Money Concepts (GMC)', short:'GMC', color:'#39ffb0', logics:[
+    {id:'swings', label:'Swings'},
+    {id:'bos', label:'Break of Structure (BOS)'},
+    {id:'choch', label:'Change of Character (CHoCH)'},
+    {id:'orderblock', label:'Order Block'},
+    {id:'hiddensupply', label:'Hidden Supply Zone'},
+    {id:'hiddendemand', label:'Hidden Demand Zone'}
+  ]},
+  smc: { label:'Smart Money Concepts (SMC)', short:'SMC', color:'#2fe3ff', logics:[
+    {id:'liquiditygrab', label:'Liquidity Grab'},
+    {id:'smc_orderblock', label:'Order Block'},
+    {id:'smc_fvg', label:'Fair Value Gap (FVG)'},
+    {id:'smc_bos', label:'Break of Structure (BOS)'},
+    {id:'smc_choch', label:'Change of Character (CHoCH)'},
+    {id:'mitigation', label:'Mitigation Block'}
+  ]},
+  ict: { label:'ICT Concepts', short:'ICT', color:'#b866ff', logics:[
+    {id:'ict_orderblock', label:'Order Block'},
+    {id:'ict_fvg', label:'Fair Value Gap (FVG)'},
+    {id:'liquiditysweep', label:'Liquidity Sweep'},
+    {id:'ote', label:'Optimal Trade Entry (OTE)'},
+    {id:'killzone', label:'Killzone Timing'},
+    {id:'breaker', label:'Breaker Block'}
+  ]},
+  ta: { label:'Technical Analysis', short:'TA', color:'#ffb454', logics:[
+    {id:'supres', label:'Support / Resistance'},
+    {id:'trendline', label:'Trendline'},
+    {id:'chartpattern', label:'Chart Pattern'},
+    {id:'indicator', label:'Indicator Signal'},
+    {id:'macross', label:'Moving Average Cross'},
+    {id:'volume', label:'Volume Confirmation'}
+  ]},
+  fundamentals: { label:'Fundamentals', short:'FUND', color:'#ff8c98', logics:[
+    {id:'newsevent', label:'News Event'},
+    {id:'ratedecision', label:'Interest Rate Decision'},
+    {id:'econdata', label:'Economic Data Release'},
+    {id:'cbpolicy', label:'Central Bank Policy'},
+    {id:'geopolitical', label:'Geopolitical Event'},
+    {id:'earnings', label:'Earnings Report'}
+  ]}
+};
+function logicLabel(id){
+  for(const t of Object.values(STRATEGY_TYPES)){ const f=t.logics.find(l=>l.id===id); if(f) return f.label; }
+  return id;
+}
+function renderLogicChoices(containerId, type, preselected){
+  preselected = preselected || [];
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const t = STRATEGY_TYPES[type];
+  if(!t){ el.innerHTML = '<div class="hint">Pick a strategy above to see its logic options — no typing needed.</div>'; return; }
+  el.innerHTML = t.logics.map(l=>`
+    <div class="logic-chip ${preselected.includes(l.id)?'checked':''}" data-id="${l.id}" onclick="this.classList.toggle('checked')">
+      <span class="logic-chip-dot"></span>${escapeHtml(l.label)}
+    </div>`).join('');
+}
+function getCheckedLogics(containerId){
+  return Array.from(document.querySelectorAll('#'+containerId+' .logic-chip.checked')).map(e=>e.dataset.id);
+}
 
 /* ============ MOBILE SIDEBAR ============ */
 function toggleSidebar(force){
@@ -1370,6 +1541,15 @@ function hydrateState(row){
   state.psychology = Object.assign({}, DEFAULT_STATE.psychology, row.psychology || {});
   if(!Array.isArray(state.psychology.strategies)) state.psychology.strategies = [];
   if(!Array.isArray(state.psychology.traders)) state.psychology.traders = [];
+  if(!Array.isArray(state.psychology.orders)) state.psychology.orders = [];
+  state.psychology.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
+  if(state.psychology.strategies.length===0){
+    state.psychology.strategies.push({
+      id:'st_gmc_default', name:'Ghost Money Concepts', tag:'trend', type:'gmc', risk:null,
+      notes:'My core strategy — reading structure and liquidity through swing points, breaks of structure, character changes, order blocks, and hidden supply/demand zones.',
+      logics:['swings','bos','choch','orderblock','hiddensupply','hiddendemand']
+    });
+  }
   if(state.psychology.traders.length===0) state.psychology.traders = [{id:'me', name:'Me'}];
   state.trades = row.trades || [];
   state.streak = row.streak || DEFAULT_STATE.streak;
@@ -1469,8 +1649,9 @@ document.querySelectorAll('.side-navbtn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
     if(btn.dataset.view==='calendar') renderCalendar();
-    if(btn.dataset.view==='analytics') { renderDashChart(); renderLeaderboards(); renderEquityChart('equityChart','equityTotal','equitySub'); }
+    if(btn.dataset.view==='analytics') { renderDashChart(); renderLeaderboards(); renderEquityChart('equityChart','equityTotal','equitySub'); renderConfluence(); }
     if(btn.dataset.view==='journal') renderJournal();
+    if(btn.dataset.view==='orders') renderOrders();
     toggleSidebar(false);
     window.scrollTo({top:0, behavior:'smooth'});
   });
@@ -1480,7 +1661,7 @@ document.querySelectorAll('.side-navbtn').forEach(btn=>{
 function renderTraderFilterOptions(){
   const opts = ['<option value="all">All Traders</option>']
     .concat(state.psychology.traders.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`));
-  ['globalTraderFilter','globalTraderFilter2','globalTraderFilter3','globalTraderFilter4'].forEach(id=>{
+  ['globalTraderFilter','globalTraderFilter2','globalTraderFilter3','globalTraderFilter4','globalTraderFilter5'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
     el.innerHTML = opts.join('');
@@ -1490,7 +1671,7 @@ function renderTraderFilterOptions(){
 function onTraderFilterChange(){
   const evtEl = document.activeElement;
   activeTraderFilter = evtEl && evtEl.value ? evtEl.value : 'all';
-  ['globalTraderFilter','globalTraderFilter2','globalTraderFilter3','globalTraderFilter4'].forEach(id=>{
+  ['globalTraderFilter','globalTraderFilter2','globalTraderFilter3','globalTraderFilter4','globalTraderFilter5'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = activeTraderFilter;
   });
@@ -1546,6 +1727,7 @@ function renderAll(){
   renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges();
   renderEquityChart('equityChartOverview','equityTotalOverview','equitySubOverview');
   renderEquityChart('equityChart','equityTotal','equitySub');
+  renderOrders(); renderConfluence();
   if(document.getElementById('view-calendar').classList.contains('active')) renderCalendar();
 }
 function renderDashboard(){
@@ -1644,6 +1826,9 @@ function traderInitials(name){
   return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('') || '?';
 }
 function renderPlaybook(){
+  if(document.getElementById('pbLogicChoices') && document.getElementById('pbLogicChoices').innerHTML.trim()===''){
+    renderPbLogicChoices();
+  }
   const chips = document.getElementById('traderChips');
   chips.innerHTML = state.psychology.traders.map(t=>`
     <div class="trader-chip">
@@ -1658,11 +1843,13 @@ function renderPlaybook(){
   } else {
     grid.innerHTML = state.psychology.strategies.map(s=>{
       const color = STRAT_TAG_COLORS[s.tag] || 'var(--bronze)';
+      const typeInfo = STRATEGY_TYPES[s.type];
       return `
       <div class="flip-card" id="flip-${s.id}" onclick="toggleFlip('${s.id}')">
         <div class="flip-inner">
           <div class="flip-face front">
             <button class="strat-del" onclick="event.stopPropagation();removeStrategy('${s.id}')" title="Remove">✕</button>
+            ${typeInfo ? `<span class="strat-type" style="color:${typeInfo.color};border-color:${typeInfo.color}55;background:${typeInfo.color}18">${typeInfo.short}</span>` : ''}
             <span class="strat-tag" style="background:${color}22;color:${color};border:1px solid ${color}55">${s.tag}</span>
             <div class="strat-name">${escapeHtml(s.name)}</div>
             <div class="strat-risk">Risk: ${s.risk ?? '—'}%</div>
@@ -1670,6 +1857,7 @@ function renderPlaybook(){
           </div>
           <div class="flip-face back">
             <div class="strat-notes">${escapeHtml(s.notes||'No entry rules written yet.')}</div>
+            ${ (s.logics && s.logics.length) ? `<div class="strat-logic-chips">${s.logics.map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}</div>` : ''}
           </div>
         </div>
       </div>`;
@@ -1694,15 +1882,23 @@ async function removeTrader(id){
 async function addStrategy(){
   const name = document.getElementById('pb_stratName').value.trim();
   const tag = document.getElementById('pb_stratTag').value;
+  const type = document.getElementById('pb_stratType').value;
   const risk = document.getElementById('pb_stratRisk').value;
   const notes = document.getElementById('pb_stratNotes').value.trim();
+  const logics = getCheckedLogics('pbLogicChoices');
   if(!name){ showToast('Give the strategy a name'); return; }
-  state.psychology.strategies.push({ id:'st_'+Date.now(), name, tag, risk: risk?parseFloat(risk):null, notes });
+  state.psychology.strategies.push({ id:'st_'+Date.now(), name, tag, type, risk: risk?parseFloat(risk):null, notes, logics });
   document.getElementById('pb_stratName').value='';
   document.getElementById('pb_stratRisk').value='';
   document.getElementById('pb_stratNotes').value='';
+  document.getElementById('pb_stratType').value='gmc';
+  renderPbLogicChoices();
   await saveState(); renderPlaybook(); populateTradeSelectors();
   showToast('Strategy added to the playbook');
+}
+function renderPbLogicChoices(){
+  const type = document.getElementById('pb_stratType').value;
+  renderLogicChoices('pbLogicChoices', type, []);
 }
 async function removeStrategy(id){
   state.psychology.strategies = state.psychology.strategies.filter(s=>s.id!==id);
@@ -1721,8 +1917,24 @@ function populateTradeSelectors(){
   const opts = ['<option value="">Discretionary / none</option>']
     .concat(state.psychology.strategies.map(s=>`<option value="${s.id}" data-risk="${s.risk??''}">${escapeHtml(s.name)}</option>`));
   sSel.innerHTML = opts.join('');
+
+  const oTSel = document.getElementById('o_trader');
+  if(oTSel){
+    oTSel.innerHTML = state.psychology.traders.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    if(activeTraderFilter!=='all' && state.psychology.traders.some(t=>t.id===activeTraderFilter)) oTSel.value = activeTraderFilter;
+  }
+  const oSSel = document.getElementById('o_strategy');
+  if(oSSel){
+    oSSel.innerHTML = opts.join('');
+    onOrderStrategyChange();
+  }
 }
-function onStrategyChange(){ updateTradeRiskPreview(); }
+function onStrategyChange(){
+  updateTradeRiskPreview();
+  const sId = document.getElementById('t_strategy').value;
+  const strat = state.psychology.strategies.find(s=>s.id===sId);
+  renderLogicChoices('tradeLogicChoices', strat ? strat.type : null, strat ? strat.logics : []);
+}
 function updateTradeRiskPreview(){
   const sSel = document.getElementById('t_strategy');
   const opt = sSel.options[sSel.selectedIndex];
@@ -1765,6 +1977,7 @@ function renderJournal(){
   } else {
     list.innerHTML = trades.map(t=>{
       const pnl = pnlOf(t);
+      const typeInfo = STRATEGY_TYPES[t.strategyType];
       return `
       <div class="trade-row">
         <div class="trade-badge ${t.result}">${t.result==='win'?'WIN':'LOSS'}</div>
@@ -1774,6 +1987,8 @@ function renderJournal(){
           <div class="trade-tags">
             <span class="tag-chip trader">${escapeHtml(traderName(t.trader))}</span>
             ${t.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>` : ''}
+            ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
+            ${(t.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
           </div>
         </div>
         <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
@@ -1825,6 +2040,43 @@ function renderLeaderboards(){
   };
   renderRows(traderRows, '#leadTraderTable tbody');
   renderRows(stratRows, '#leadStrategyTable tbody');
+}
+
+/* ============ CONFLUENCE SCORE ============ */
+function buildConfluenceStats(){
+  const trades = filteredTrades();
+  const map = {};
+  trades.forEach(t=>{
+    (t.logics||[]).forEach(logicId=>{
+      if(!map[logicId]) map[logicId] = { wins:0, losses:0, trades:0 };
+      map[logicId].trades++;
+      if(t.result==='win') map[logicId].wins++; else map[logicId].losses++;
+    });
+  });
+  return Object.entries(map).map(([id,v])=>({
+    id, label: logicLabel(id), trades:v.trades, wins:v.wins, losses:v.losses,
+    winRate: v.trades ? Math.round(v.wins/v.trades*100) : 0
+  })).sort((a,b)=> b.winRate-a.winRate || b.trades-a.trades);
+}
+function renderConfluence(){
+  const el = document.getElementById('confluenceList');
+  if(!el) return;
+  const rows = buildConfluenceStats();
+  if(rows.length===0){
+    el.innerHTML = '<div class="empty-state">Log trades with logic tags selected to see which concepts actually win for you.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r=>{
+    const barColor = r.winRate>=60 ? 'linear-gradient(90deg,var(--win),var(--win-bright))'
+      : r.winRate>=40 ? 'linear-gradient(90deg,var(--amber),#ffd39a)'
+      : 'linear-gradient(90deg,var(--loss),var(--loss-bright))';
+    return `
+    <div class="confluence-row">
+      <div class="confluence-label">${escapeHtml(r.label)}</div>
+      <div class="confluence-bar-wrap"><div class="confluence-bar" style="width:${r.winRate}%;background:${barColor}"></div></div>
+      <div class="confluence-stats"><b>${r.winRate}%</b><span>${r.wins}W / ${r.losses}L · ${r.trades} trades</span></div>
+    </div>`;
+  }).join('');
 }
 
 /* ============ TOOLTIP HELPER ============ */
@@ -2205,6 +2457,7 @@ function openPretrade(){
 }
 function proceedToTrade(){
   closeModal('pretradeOverlay');
+  closingOrderId = null;
   document.getElementById('t_rr').value='';
   document.getElementById('t_lossAmount').value=''; document.getElementById('t_lossAmount').dataset.touched='';
   document.getElementById('t_winAmount').value=''; document.getElementById('t_winAmount').dataset.touched='';
@@ -2212,6 +2465,7 @@ function proceedToTrade(){
   document.getElementById('t_result').value='win'; onResultChange();
   populateTradeSelectors();
   updateTradeRiskPreview();
+  onStrategyChange();
   document.getElementById('tradeOverlay').classList.add('show');
 }
 function onResultChange(){
@@ -2230,13 +2484,21 @@ async function submitTrade(){
   const notes = document.getElementById('t_notes').value;
   const trader = document.getElementById('t_trader').value;
   const strategy = document.getElementById('t_strategy').value || null;
+  const stratObj = state.psychology.strategies.find(s=>s.id===strategy);
+  const strategyType = stratObj ? stratObj.type : null;
+  const logics = getCheckedLogics('tradeLogicChoices');
   const now = new Date();
   let brokeRuleThisTrade = pendingViolation;
   if(state.rules.minRR!=null && rr!=='' && parseFloat(rr) < state.rules.minRR) brokeRuleThisTrade = true;
 
-  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy });
+  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics });
   state.day.tradesCount += 1;
   if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; } else { state.consecutiveLosses = 0; }
+
+  if(closingOrderId){
+    state.psychology.orders = state.psychology.orders.filter(o=>o.id!==closingOrderId);
+    closingOrderId = null;
+  }
 
   if(brokeRuleThisTrade){
     state.day.ruleBrokenToday = true; state.streak.count = 0;
@@ -2251,6 +2513,89 @@ async function submitTrade(){
   renderAll();
 }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ============ ORDER BOOK: pre-executed trade journal ============ */
+function onOrderStrategyChange(){
+  const sId = document.getElementById('o_strategy').value;
+  const strat = state.psychology.strategies.find(s=>s.id===sId);
+  renderLogicChoices('orderLogicChoices', strat ? strat.type : null, strat ? strat.logics : []);
+}
+async function placeOrder(){
+  const trader = document.getElementById('o_trader').value;
+  const strategy = document.getElementById('o_strategy').value || null;
+  const stratObj = state.psychology.strategies.find(s=>s.id===strategy);
+  const strategyType = stratObj ? stratObj.type : null;
+  const direction = document.getElementById('o_direction').value;
+  const rrPlanned = document.getElementById('o_rr').value;
+  const notes = document.getElementById('o_notes').value.trim();
+  const logics = getCheckedLogics('orderLogicChoices');
+  const now = new Date();
+  state.psychology.orders.push({
+    id:'ord_'+Date.now(), date:todayStr(), time:now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
+    trader, strategy, strategyType, logics, direction, rrPlanned: rrPlanned || null, notes, status:'pending'
+  });
+  document.getElementById('o_rr').value='';
+  document.getElementById('o_notes').value='';
+  renderLogicChoices('orderLogicChoices', stratObj ? stratObj.type : null, []);
+  await saveState(); renderOrders();
+  showToast('Order placed — close it out once you know the result');
+}
+function renderOrders(){
+  const list = document.getElementById('ordersList');
+  const countEl = document.getElementById('ordersCount');
+  if(!list) return;
+  const orders = (state.psychology.orders||[]).filter(o=>activeTraderFilter==='all' || o.trader===activeTraderFilter).slice().reverse();
+  if(countEl) countEl.textContent = orders.length ? `${orders.length} pending` : '';
+  if(orders.length===0){
+    list.innerHTML = '<div class="empty-state"><span class="glyph">🎫</span>No pending orders. Place one to start tracking it.</div>';
+    return;
+  }
+  list.innerHTML = orders.map(o=>{
+    const typeInfo = STRATEGY_TYPES[o.strategyType];
+    return `
+    <div class="trade-row">
+      <div class="trade-badge pending">${o.direction==='sell'?'SELL':'BUY'}</div>
+      <div class="trade-meta">
+        <div class="top">${o.date} ${o.time}</div>
+        <div class="bottom">${o.notes ? escapeHtml(o.notes) : 'No notes'}</div>
+        <div class="trade-tags">
+          <span class="tag-chip trader">${escapeHtml(traderName(o.trader))}</span>
+          ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
+          ${o.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(o.strategy)||'—')}</span>` : ''}
+          ${(o.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
+        </div>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-sm btn-win" onclick="closeOrder('${o.id}','win')">Won</button>
+        <button class="btn btn-sm btn-loss" onclick="closeOrder('${o.id}','loss')">Lost</button>
+        <button class="btn btn-sm btn-ghost" onclick="cancelOrder('${o.id}')" title="Cancel order">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function cancelOrder(id){
+  state.psychology.orders = state.psychology.orders.filter(o=>o.id!==id);
+  await saveState(); renderOrders();
+  showToast('Order cancelled');
+}
+function closeOrder(id, result){
+  const order = state.psychology.orders.find(o=>o.id===id);
+  if(!order) return;
+  closingOrderId = id;
+  populateTradeSelectors();
+  document.getElementById('t_trader').value = order.trader;
+  document.getElementById('t_strategy').value = order.strategy || '';
+  onStrategyChange();
+  const preselected = order.logics || [];
+  renderLogicChoices('tradeLogicChoices', order.strategyType, preselected);
+  document.getElementById('t_result').value = result; onResultChange();
+  document.getElementById('t_rr').value = order.rrPlanned || '';
+  document.getElementById('t_lossAmount').value=''; document.getElementById('t_lossAmount').dataset.touched='';
+  document.getElementById('t_winAmount').value=''; document.getElementById('t_winAmount').dataset.touched='';
+  document.getElementById('t_notes').value = order.notes || '';
+  updateTradeRiskPreview();
+  document.getElementById('tradeOverlay').classList.add('show');
+}
 
 let toastTimer;
 function showToast(msg){
@@ -2332,7 +2677,7 @@ function showCalDay(iso){
       <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:${dayPnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>
     </div>
     <div class="trade-list" style="max-height:260px">
-      ${trades.map(t=>{ const pnl = pnlOf(t); return `
+      ${trades.map(t=>{ const pnl = pnlOf(t); const typeInfo = STRATEGY_TYPES[t.strategyType]; return `
         <div class="trade-row">
           <div class="trade-badge ${t.result}">${t.result==='win'?'WIN':'LOSS'}</div>
           <div class="trade-meta">
@@ -2341,6 +2686,8 @@ function showCalDay(iso){
             <div class="trade-tags">
               <span class="tag-chip trader">${escapeHtml(traderName(t.trader))}</span>
               ${t.strategy?`<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>`:''}
+              ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
+              ${(t.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
             </div>
           </div>
           <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
