@@ -5,7 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07080b">
 <title>Ghost Discipline — GMC Traders</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="shortcut icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta property="og:title" content="Ghost Discipline — GMC Traders">
+<meta property="og:description" content="A private terminal for traders who keep their word.">
+<meta property="og:image" content="logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,450;0,9..144,560;0,9..144,650;0,9..144,750;1,9..144,500&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -30,6 +39,11 @@
   --win-bright:#7ee8b8;
   --loss:#e2596b;
   --loss-bright:#ff8c98;
+  --neon-green:#39ffb0;
+  --neon-red:#ff3d6b;
+  --neon-cyan:#2fe3ff;
+  --neon-purple:#b866ff;
+  --neon-magenta:#ff3ecb;
   --r-sm:10px; --r-md:16px; --r-lg:22px;
 }
 *{box-sizing:border-box;}
@@ -63,18 +77,46 @@ a{color:var(--bronze-bright);}
 }
 
 /* ============ AUTH SCREEN ============ */
-#authScreen{ min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden; }
+#authScreen{ min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;background:#050609; }
 #authScreen::before{
-  content:'';position:absolute;inset:0;pointer-events:none;opacity:0.5;
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:0.5;z-index:1;
   background-image:linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
   background-size:42px 42px; mask-image:radial-gradient(ellipse 800px 500px at 50% 30%, black, transparent 75%);
 }
-.auth-wrap{ display:flex;align-items:center;gap:70px;max-width:1000px;width:100%;position:relative;z-index:1; }
+.auth-scan{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0.35;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode:overlay;
+}
+.auth-vignette{position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:radial-gradient(ellipse 1400px 900px at 50% 45%, transparent 45%, rgba(0,0,0,0.75) 100%);
+}
+.auth-blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;opacity:0.55;}
+.auth-blob-cyan{width:480px;height:480px;background:var(--neon-cyan);top:-160px;left:-140px;animation:driftA 16s ease-in-out infinite;}
+.auth-blob-purple{width:520px;height:520px;background:var(--neon-purple);bottom:-200px;right:-160px;animation:driftB 19s ease-in-out infinite;}
+.auth-blob-magenta{width:380px;height:380px;background:var(--neon-magenta);bottom:10%;left:8%;animation:driftC 14s ease-in-out infinite;opacity:0.35;}
+@keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(60px,40px) scale(1.12);}}
+@keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,-30px) scale(1.08);}}
+@keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-40px) scale(1.15);}}
+.auth-wrap{ display:flex;align-items:center;gap:70px;max-width:1000px;width:100%;position:relative;z-index:3; }
 @media(max-width:840px){.auth-wrap{flex-direction:column;gap:34px;}}
+@media(max-width:420px){
+  .medallion{width:150px;height:150px;}
+  .medallion-caption{bottom:-24px;font-size:9px;}
+  .auth-card{padding:32px 22px;}
+  .auth-title{font-size:25px;}
+  .auth-blob-cyan,.auth-blob-purple{width:300px;height:300px;}
+  .auth-blob-magenta{width:220px;height:220px;}
+}
 .auth-emblem{flex-shrink:0;perspective:1400px;text-align:center;}
 
 /* ============ MEDALLION — cast-brass 3D bull seal ============ */
 .medallion{ width:220px;height:220px;position:relative;transform-style:preserve-3d; transition:transform .5s cubic-bezier(.2,.8,.2,1); animation:breathe 7s ease-in-out infinite; }
+.medallion::before{
+  content:'';position:absolute;inset:-22px;border-radius:50%;z-index:-1;
+  background:conic-gradient(from 0deg, var(--neon-cyan), var(--neon-purple), var(--neon-magenta), var(--neon-cyan));
+  filter:blur(22px);opacity:0.55;animation:spinRim 9s linear infinite;
+}
+@keyframes spinRim{to{transform:rotate(360deg);}}
 @keyframes breathe{ 0%,100%{transform:rotateY(-7deg) rotateX(4deg) translateZ(0);} 50%{transform:rotateY(7deg) rotateX(-4deg) translateZ(10px);} }
 .medallion-plate{
   position:absolute;inset:0;border-radius:50%;
@@ -106,15 +148,24 @@ a{color:var(--bronze-bright);}
 .medallion-plate.broken ~ .medallion-crack, .med-small.broken .medallion-crack{opacity:1;}
 
 .auth-card{
-  background:var(--panel);border:1px solid var(--steel);border-radius:var(--r-lg);
-  padding:44px 40px;width:400px;backdrop-filter:blur(20px);
+  position:relative;
+  background:var(--panel);border:1px solid transparent;border-radius:var(--r-lg);
+  padding:44px 40px;width:400px;max-width:92vw;backdrop-filter:blur(20px);
   box-shadow:0 44px 90px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  background-clip:padding-box;
 }
-.auth-title{font-family:'Fraunces',serif;font-size:30px;font-weight:650;margin:0 0 4px;color:var(--platinum);letter-spacing:-0.01em;}
+.auth-card::before{
+  content:'';position:absolute;inset:0;border-radius:var(--r-lg);padding:1.5px;z-index:-1;
+  background:conic-gradient(from 120deg, var(--bronze), var(--neon-cyan), var(--neon-purple), var(--neon-magenta), var(--bronze));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  opacity:0.6; animation:spinRim 12s linear infinite;
+}
+.auth-title{font-family:'Fraunces',serif;font-size:30px;font-weight:650;margin:0 0 4px;color:var(--platinum);letter-spacing:-0.01em;text-shadow:0 0 22px rgba(47,227,255,0.18);}
 .auth-sub{font-size:12.5px;color:var(--slate);margin-bottom:28px;letter-spacing:0.02em;line-height:1.5;}
 .auth-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--steel);}
 .auth-tab{ flex:1;text-align:center;padding:10px 0;font-size:11.5px;letter-spacing:0.1em;text-transform:uppercase; color:var(--slate);cursor:pointer;border-bottom:1.5px solid transparent;font-weight:600; transition:color .15s ease; }
-.auth-tab.active{color:var(--bronze-bright);border-bottom-color:var(--bronze);}
+.auth-tab.active{color:var(--bronze-bright);border-bottom-color:var(--bronze);box-shadow:0 1px 12px rgba(47,227,255,0.25);}
 .auth-field{margin-bottom:16px;}
 .auth-field label{display:block;font-size:10.5px;color:var(--slate);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;}
 .auth-field input{
@@ -122,7 +173,7 @@ a{color:var(--bronze-bright);}
   padding:11px 13px;border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13.5px;outline:none;
   transition:border-color .15s ease, box-shadow .15s ease;
 }
-.auth-field input:focus{border-color:var(--bronze-dim);box-shadow:0 0 0 3px rgba(201,154,85,0.14);}
+.auth-field input:focus{border-color:var(--bronze-dim);box-shadow:0 0 0 3px rgba(201,154,85,0.14), 0 0 18px rgba(47,227,255,0.16);}
 .auth-msg{font-size:12px;margin-bottom:14px;line-height:1.5;padding:10px 12px;border-radius:var(--r-sm);display:none;}
 .auth-msg.show{display:block;}
 .auth-msg.error{background:rgba(226,89,107,0.1);color:#ffc2ca;border:1px solid rgba(226,89,107,0.3);}
@@ -471,8 +522,26 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .equity-stats .es{text-align:right;}
 .equity-stats .es b{display:block;font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--platinum);}
 .equity-stats .es span{font-size:9.5px;color:var(--slate);text-transform:uppercase;letter-spacing:0.06em;}
-.equity-wrap{perspective:1500px;margin-top:14px;overflow-x:auto;}
-.equity-inner{transform:rotateX(26deg) rotateZ(-1.4deg);transform-style:preserve-3d;min-width:640px;}
+.equity-wrap{
+  margin-top:14px;overflow:hidden;border-radius:var(--r-md);position:relative;
+  background:
+    radial-gradient(ellipse 500px 260px at 18% 100%, rgba(57,255,176,0.07), transparent 60%),
+    radial-gradient(ellipse 500px 260px at 85% 0%, rgba(184,102,255,0.06), transparent 60%),
+    #030405;
+  border:1px solid rgba(255,255,255,0.06);
+  padding:4px 2px 0;
+}
+.equity-wrap::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 120% 100% at 50% 40%, transparent 55%, rgba(0,0,0,0.6) 100%);
+}
+.equity-inner{position:relative;width:100%;}
+.equity-inner.rising{animation:chartRise 950ms cubic-bezier(.16,.9,.2,1) both;}
+@keyframes chartRise{
+  0%{opacity:0;transform:translateY(26px) scaleY(0.82);transform-origin:bottom;}
+  100%{opacity:1;transform:translateY(0) scaleY(1);transform-origin:bottom;}
+}
+@media(max-width:600px){.equity-wrap{padding:2px 0 0;}}
 
 /* ============ RISK GAUGE (brass instrument dial) ============ */
 .gauge-row{display:flex;gap:22px;flex-wrap:wrap;justify-content:space-around;margin-top:6px;}
@@ -527,6 +596,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 
 <!-- ============ AUTH SCREEN ============ -->
 <div id="authScreen">
+  <div class="auth-blob auth-blob-cyan"></div>
+  <div class="auth-blob auth-blob-purple"></div>
+  <div class="auth-blob auth-blob-magenta"></div>
+  <div class="auth-scan"></div>
+  <div class="auth-vignette"></div>
   <div class="auth-wrap">
     <div class="auth-emblem">
       <div class="medallion" id="authMedallion">
@@ -1730,7 +1804,7 @@ function renderEquityChart(containerId, totalId, subId){
   if(!container) return;
   const trades = filteredTrades();
   if(trades.length===0){
-    container.innerHTML = '<div class="empty-state" style="transform:rotateX(-26deg) rotateZ(1.4deg)"><span class="glyph">📈</span>No trades yet — your equity curve will build as you log trades.</div>';
+    container.innerHTML = '<div class="empty-state"><span class="glyph">📈</span>No trades yet — your equity curve will build as you log trades.</div>';
     if(totalEl){ totalEl.textContent='$0'; totalEl.className='equity-total'; }
     setEquityStats([]);
     return;
@@ -1745,7 +1819,7 @@ function renderEquityChart(containerId, totalId, subId){
     points.push({x:i+1,y:cum,label:t.date});
   });
 
-  const W = 720, H = 230, padL = 10, padR = 30, padT = 26, padB = 34;
+  const W = 720, H = 230, padL = 10, padR = 20, padT = 26, padB = 30;
   const minY = Math.min(0, ...points.map(p=>p.y));
   const maxY = Math.max(0, ...points.map(p=>p.y));
   const spanY = (maxY-minY) || 1;
@@ -1754,31 +1828,29 @@ function renderEquityChart(containerId, totalId, subId){
   const sy = v => padT + plotH - ((v-minY)/spanY)*plotH;
   const baseY = sy(0);
 
-  const dx = 16, dy = 12; // isometric extrusion offset
-
   const topPts = points.map((p,i)=>[sx(i), sy(p.y)]);
   const overallUp = points[points.length-1].y >= points[0].y;
 
   const segs = catmullRomSegments(topPts);
-  const smoothPath = segsToPath(segs);
   const sampled = topPts.length>1 ? sampleSegs(segs, 10) : topPts;
 
-  // floor grid lines
+  const NEON_UP = '#39ffb0', NEON_DOWN = '#ff3d6b';
+
+  // subtle floor grid, neon-tinted
   let floorLines = '';
   for(let g=0; g<=4; g++){
     const gy = padT + plotH*(g/4);
-    floorLines += `<line x1="${padL}" y1="${gy}" x2="${padL+plotW}" y2="${gy}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+    floorLines += `<line x1="${padL}" y1="${gy}" x2="${padL+plotW}" y2="${gy}" stroke="rgba(255,255,255,0.045)" stroke-width="1"/>`;
   }
 
-  // extruded ribbon from finely sampled smooth curve, per-segment colored by local direction
-  let ribbon = '';
+  // 2D neon line, colored per-segment by local direction (green up / red down)
+  let glowSegs = '', coreSegs = '';
   for(let i=0;i<sampled.length-1;i++){
     const [x1,y1] = sampled[i], [x2,y2] = sampled[i+1];
     const up = y2 <= y1;
-    const color = up ? 'rgba(62,207,142,0.30)' : 'rgba(226,89,107,0.28)';
-    const colorDark = up ? 'rgba(62,207,142,0.07)' : 'rgba(226,89,107,0.07)';
-    ribbon += `<polygon points="${x1},${y1} ${x2},${y2} ${x2+dx},${y2+dy} ${x1+dx},${y1+dy}" fill="${color}"/>`;
-    ribbon += `<polygon points="${x1+dx},${y1+dy} ${x2+dx},${y2+dy} ${x2+dx},${baseY+dy} ${x1+dx},${baseY+dy}" fill="${colorDark}"/>`;
+    const c = up ? NEON_UP : NEON_DOWN;
+    glowSegs += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="7" stroke-linecap="round"/>`;
+    coreSegs += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`;
   }
 
   const areaPath = `M${sampled[0][0]},${baseY} ` + sampled.map(p=>`L${p[0]},${p[1]}`).join(' ') + ` L${sampled[sampled.length-1][0]},${baseY} Z`;
@@ -1788,40 +1860,49 @@ function renderEquityChart(containerId, totalId, subId){
   topPts.forEach((p,i)=>{
     if(i%showEvery!==0 && i!==topPts.length-1) return;
     const val = points[i].y;
-    const c = val>=0 ? '#7ee8b8' : '#ff8c98';
-    markers += `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${c}" stroke="#07080b" stroke-width="1.4" class="eq-marker" data-i="${i}"/>`;
+    const c = val>=0 ? NEON_UP : NEON_DOWN;
+    markers += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${c}" stroke="#020304" stroke-width="1.4" class="eq-marker" data-i="${i}"/>`;
   });
 
-  const lineColor = overallUp ? '#3ecf8e' : '#e2596b';
-  const glowColor = overallUp ? 'rgba(62,207,142,0.55)' : 'rgba(226,89,107,0.55)';
-
   container.innerHTML = `
-    <svg width="100%" viewBox="0 0 ${W+dx} ${H+dy+6}" style="overflow:visible;filter:drop-shadow(0 18px 26px rgba(0,0,0,0.45))">
+    <svg width="100%" viewBox="0 0 ${W} ${H+6}" style="overflow:visible">
       <defs>
         <linearGradient id="areaGrad-${containerId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${overallUp?'rgba(62,207,142,0.35)':'rgba(226,89,107,0.35)'}"/>
-          <stop offset="100%" stop-color="${overallUp?'rgba(62,207,142,0.02)':'rgba(226,89,107,0.02)'}"/>
+          <stop offset="0%" stop-color="${overallUp?'rgba(57,255,176,0.32)':'rgba(255,61,107,0.32)'}"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
         </linearGradient>
+        <filter id="eqGlow-${containerId}" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="4.4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <clipPath id="eqReveal-${containerId}"><rect id="eqRevealRect-${containerId}" x="0" y="0" width="0" height="${H+6}"/></clipPath>
       </defs>
       ${floorLines}
-      <line x1="${padL}" y1="${baseY}" x2="${padL+plotW}" y2="${baseY}" stroke="rgba(255,255,255,0.14)" stroke-width="1" stroke-dasharray="3,3"/>
-      ${ribbon}
-      <path d="${areaPath}" fill="url(#areaGrad-${containerId})"/>
-      <path id="eqline-${containerId}" d="${smoothPath}" fill="none" stroke="${lineColor}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px ${glowColor})"/>
-      ${markers}
-      <rect id="eqhit-${containerId}" x="${padL}" y="0" width="${plotW}" height="${H+dy}" fill="transparent" style="cursor:crosshair"/>
+      <line x1="${padL}" y1="${baseY}" x2="${padL+plotW}" y2="${baseY}" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3,4"/>
+      <g clip-path="url(#eqReveal-${containerId})">
+        <path d="${areaPath}" fill="url(#areaGrad-${containerId})"/>
+        <g filter="url(#eqGlow-${containerId})" opacity="0.8">${glowSegs}</g>
+        <g>${coreSegs}</g>
+        ${markers}
+      </g>
+      <rect id="eqhit-${containerId}" x="${padL}" y="0" width="${plotW}" height="${H+6}" fill="transparent" style="cursor:crosshair"/>
     </svg>`;
 
-  // draw-in animation
-  const lineEl = document.getElementById('eqline-'+containerId);
-  if(lineEl){
-    const len = lineEl.getTotalLength();
-    lineEl.style.strokeDasharray = len;
-    lineEl.style.strokeDashoffset = len;
-    lineEl.getBoundingClientRect();
-    lineEl.style.transition = 'stroke-dashoffset 1s cubic-bezier(.16,.9,.2,1)';
-    requestAnimationFrame(()=>{ lineEl.style.strokeDashoffset = 0; });
+  // left-to-right neon reveal ("rise") animation
+  const revealRect = document.getElementById('eqRevealRect-'+containerId);
+  if(revealRect){
+    revealRect.style.transition = 'none';
+    revealRect.setAttribute('width', 0);
+    revealRect.getBoundingClientRect();
+    requestAnimationFrame(()=>{
+      revealRect.style.transition = 'width 1.15s cubic-bezier(.16,.9,.2,1)';
+      revealRect.setAttribute('width', W);
+    });
   }
+  // re-trigger the panel's rise-in animation every time this chart is (re)rendered
+  container.classList.remove('rising');
+  void container.offsetWidth;
+  container.classList.add('rising');
   // hover tooltip
   const hitRect = document.getElementById('eqhit-'+containerId);
   if(hitRect){
