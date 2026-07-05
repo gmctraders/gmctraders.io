@@ -47,7 +47,7 @@
   --r-sm:10px; --r-md:16px; --r-lg:22px;
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;min-height:100%;}
+html,body{margin:0;padding:0;min-height:100%;width:100%;max-width:100%;overflow-x:hidden;}
 body{
   background:
     radial-gradient(ellipse 1000px 620px at 18% -10%, rgba(201,154,85,0.09), transparent 60%),
@@ -141,9 +141,14 @@ a{color:var(--bronze-bright);}
 .medallion-crack{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease;}
 .medallion-plate.broken{
   background:
-    radial-gradient(circle at 30% 22%, rgba(255,170,170,0.30), transparent 46%),
-    conic-gradient(from 208deg, #241010, #3a1414 25%, #150a0a 50%, #331414 75%, #241010);
-  border-color:rgba(226,89,107,0.5);
+    radial-gradient(circle at 30% 22%, rgba(255,255,255,0.10), transparent 46%),
+    conic-gradient(from 208deg, #17181d, #1e2027 25%, #101116 50%, #1c1e25 75%, #17181d);
+  border-color:rgba(255,61,107,0.55);
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.10),
+    inset 0 -20px 34px rgba(0,0,0,0.72),
+    0 26px 58px rgba(0,0,0,0.55),
+    0 0 30px rgba(255,61,107,0.32);
 }
 .medallion-plate.broken ~ .medallion-crack, .med-small.broken .medallion-crack{opacity:1;}
 
@@ -200,7 +205,7 @@ a{color:var(--bronze-bright);}
 .gate-card{background:var(--panel);border:1px solid var(--steel);border-radius:var(--r-lg);padding:34px;backdrop-filter:blur(16px);}
 
 /* ============ APP SHELL ============ */
-#appShell{display:none;min-height:100vh;}
+#appShell{display:none;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden;}
 #appShell.show{display:flex;}
 
 .sidebar{
@@ -250,7 +255,7 @@ a{color:var(--bronze-bright);}
 .mobile-topbar{display:none;}
 .sidebar-scrim{display:none;}
 @media(max-width:960px){
-  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-104%);transition:transform .25s ease;box-shadow:0 0 60px rgba(0,0,0,0.6);}
+  .sidebar{position:fixed;left:0;top:0;height:100vh;width:256px;max-width:82vw;transform:translateX(-104%);transition:transform .25s ease;box-shadow:0 0 60px rgba(0,0,0,0.6);}
   .sidebar.open{transform:translateX(0);}
   .sidebar-scrim{display:none;position:fixed;inset:0;background:rgba(2,2,8,0.6);z-index:39;backdrop-filter:blur(2px);}
   .sidebar-scrim.show{display:block;}
@@ -268,7 +273,7 @@ a{color:var(--bronze-bright);}
   .hamburger span::before{top:-5px;} .hamburger span::after{top:5px;}
 }
 
-.main{flex:1;min-width:0;padding:26px 30px 80px;max-width:1340px;}
+.main{flex:1;min-width:0;width:100%;padding:26px 30px 80px;max-width:1340px;}
 @media(max-width:600px){.main{padding:16px 14px 70px;}}
 
 .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
@@ -1820,19 +1825,37 @@ function renderEquityChart(containerId, totalId, subId){
   });
 
   const W = 720, H = 230, padL = 10, padR = 20, padT = 26, padB = 30;
-  const minY = Math.min(0, ...points.map(p=>p.y));
-  const maxY = Math.max(0, ...points.map(p=>p.y));
-  const spanY = (maxY-minY) || 1;
   const plotW = W-padL-padR, plotH = H-padT-padB;
   const sx = i => padL + (points.length<=1?0:(i/(points.length-1))*plotW);
+
+  // Expand each losing step into a small "retest": an undershoot past the
+  // final value followed by a partial bounce back up, both scaled to the
+  // size of the loss, before smoothing — this also keeps the line from
+  // reading as a flat horizontal segment across a drawdown.
+  const expanded = [{x:sx(0), y:points[0].y}];
+  for(let i=1;i<points.length;i++){
+    const x0 = sx(i-1), y0v = points[i-1].y;
+    const x1 = sx(i), y1v = points[i].y;
+    const drop = y0v - y1v;
+    if(drop > 0){
+      const dipAmt = drop*0.22, retestAmt = drop*0.42;
+      expanded.push({x:x0+(x1-x0)*0.42, y:y1v-dipAmt});
+      expanded.push({x:x0+(x1-x0)*0.74, y:y1v+retestAmt});
+    }
+    expanded.push({x:x1, y:y1v});
+  }
+  const minY = Math.min(0, ...expanded.map(p=>p.y));
+  const maxY = Math.max(0, ...expanded.map(p=>p.y));
+  const spanY = (maxY-minY) || 1;
   const sy = v => padT + plotH - ((v-minY)/spanY)*plotH;
   const baseY = sy(0);
 
   const topPts = points.map((p,i)=>[sx(i), sy(p.y)]);
+  const curvePts = expanded.map(p=>[p.x, sy(p.y)]);
   const overallUp = points[points.length-1].y >= points[0].y;
 
-  const segs = catmullRomSegments(topPts);
-  const sampled = topPts.length>1 ? sampleSegs(segs, 10) : topPts;
+  const segs = catmullRomSegments(curvePts);
+  const sampled = curvePts.length>1 ? sampleSegs(segs, 10) : curvePts;
 
   const NEON_UP = '#39ffb0', NEON_DOWN = '#ff3d6b';
 
