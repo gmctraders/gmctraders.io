@@ -262,6 +262,9 @@ a{color:var(--bronze-bright);}
 .mobile-topbar{display:none;}
 .sidebar-scrim{display:none;}
 @media(max-width:960px){
+  #appShell.show{flex-direction:column;}
+  .mobile-topbar{width:100%;}
+  .main{width:100%;}
   .sidebar{position:fixed;left:0;top:0;height:100vh;width:256px;max-width:82vw;transform:translateX(-104%);transition:transform .25s ease;box-shadow:0 0 60px rgba(0,0,0,0.6);padding-top:calc(22px + env(safe-area-inset-top));}
   .sidebar.open{transform:translateX(0);}
   .sidebar-scrim{display:none;position:fixed;inset:0;background:rgba(2,2,8,0.6);z-index:39;backdrop-filter:blur(2px);}
