@@ -815,10 +815,6 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
     <div class="auth-card">
       <h2 class="auth-title">Ghost Discipline</h2>
       <div class="auth-sub">A private terminal for traders who keep their word.</div>
-      <div class="auth-tabs">
-        <div class="auth-tab active" data-tab="signin" onclick="switchAuthTab('signin')">Sign In</div>
-        <div class="auth-tab" data-tab="signup" onclick="switchAuthTab('signup')">Sign Up</div>
-      </div>
       <div class="auth-msg" id="authMsg"></div>
       <div class="auth-field">
         <label>Email</label>
@@ -829,7 +825,39 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="btn-gold" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
-      <div class="auth-foot">Your data is private to your account, secured by row-level access control.</div>
+      <div class="auth-foot">Access is by invitation only. Your data is private to your account, secured by row-level access control.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SET PASSWORD SCREEN (invited traders land here) ============ -->
+<div id="setPasswordScreen" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;">
+  <div class="auth-wrap">
+    <div class="auth-emblem">
+      <div class="medallion">
+        <div class="medallion-plate">
+          <div class="medallion-ring"></div>
+          <div class="medallion-ring2"></div>
+          <div class="medallion-shine"></div>
+          <img class="medallion-logo" src="logo.png" alt="GMC Traders">
+        </div>
+        <div class="medallion-caption">Discipline over emotion</div>
+      </div>
+    </div>
+    <div class="auth-card">
+      <h2 class="auth-title">Activate Your Account</h2>
+      <div class="auth-sub" id="setPasswordEmailLabel">Set a password to finish setting up your access.</div>
+      <div class="auth-msg" id="setPasswordMsg"></div>
+      <div class="auth-field">
+        <label>New Password</label>
+        <input type="password" id="newPassword" placeholder="At least 6 characters" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label>Confirm Password</label>
+        <input type="password" id="newPassword2" placeholder="Re-enter your password" autocomplete="new-password">
+      </div>
+      <button class="btn-gold" id="setPasswordBtn" onclick="handleSetPassword()">Activate Account</button>
+      <div class="auth-foot">This finishes your invitation — after this you can sign in normally anytime.</div>
     </div>
   </div>
 </div>
@@ -1513,7 +1541,6 @@ function resetMoodChoices(preselected){
   selectedMood = preselected || null;
   document.querySelectorAll('#tradeMoodChoices .mood-chip').forEach(c=>c.classList.toggle('selected', c.dataset.mood===selectedMood));
 }
-let authMode = 'signin';
 let calViewDate = new Date();
 let activeTraderFilter = 'all';
 const STRAT_TAG_COLORS = {
@@ -1593,13 +1620,6 @@ function toggleSidebar(force){
 }
 
 /* ============ AUTH ============ */
-function switchAuthTab(mode){
-  authMode = mode;
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===mode));
-  document.getElementById('authSubmitBtn').textContent = mode==='signin' ? 'Sign In' : 'Create Account';
-  document.getElementById('authMsg').classList.remove('show');
-}
-
 async function handleAuthSubmit(){
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
@@ -1612,22 +1632,50 @@ async function handleAuthSubmit(){
   }
   btn.disabled = true;
   try{
-    if(authMode === 'signin'){
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if(error) throw error;
-      await onAuthed(data.user);
-    } else {
-      const { data, error } = await sb.auth.signUp({ email, password });
-      if(error) throw error;
-      if(!data.session){
-        showAuthMsg('Account created. Check your email to confirm, then sign in.', 'info');
-        switchAuthTab('signin');
-      } else {
-        await onAuthed(data.user);
-      }
-    }
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    await onAuthed(data.user);
   }catch(e){
     showAuthMsg(e.message || 'Something went wrong. Try again.', 'error');
+  }
+  btn.disabled = false;
+}
+
+/* ============ INVITE / SET PASSWORD FLOW ============ */
+function getHashParams(){
+  const raw = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  return new URLSearchParams(raw);
+}
+function showSetPasswordScreen(user){
+  document.getElementById('authScreen').style.display = 'none';
+  const label = document.getElementById('setPasswordEmailLabel');
+  if(label && user && user.email) label.textContent = `Set a password for ${user.email} to finish activating your access.`;
+  document.getElementById('setPasswordScreen').style.display = 'flex';
+}
+function showSetPasswordMsg(text, type){
+  const msg = document.getElementById('setPasswordMsg');
+  msg.textContent = text;
+  msg.className = 'auth-msg show ' + type;
+}
+async function handleSetPassword(){
+  const pw = document.getElementById('newPassword').value;
+  const pw2 = document.getElementById('newPassword2').value;
+  const btn = document.getElementById('setPasswordBtn');
+  if(!pw || pw.length < 6){
+    showSetPasswordMsg('Password must be at least 6 characters.', 'error'); return;
+  }
+  if(pw !== pw2){
+    showSetPasswordMsg('Passwords do not match.', 'error'); return;
+  }
+  btn.disabled = true;
+  try{
+    const { data, error } = await sb.auth.updateUser({ password: pw });
+    if(error) throw error;
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    document.getElementById('setPasswordScreen').style.display = 'none';
+    await onAuthed(data.user);
+  }catch(e){
+    showSetPasswordMsg(e.message || 'Something went wrong. Try again.', 'error');
   }
   btn.disabled = false;
 }
@@ -3170,9 +3218,15 @@ function showCalDay(iso){
 
 /* ============ BOOT ============ */
 (async function boot(){
+  const hashParams = getHashParams();
+  const linkType = hashParams.get('type'); // 'invite' or 'recovery' when arriving from an email link
   const { data } = await sb.auth.getSession();
   if(data.session){
-    await onAuthed(data.session.user);
+    if(linkType === 'invite' || linkType === 'recovery'){
+      showSetPasswordScreen(data.session.user);
+    } else {
+      await onAuthed(data.session.user);
+    }
   }
 })();
 </script>
