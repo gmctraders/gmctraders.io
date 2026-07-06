@@ -343,6 +343,7 @@ a{color:var(--bronze-bright);}
   backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
   transition:transform .55s cubic-bezier(.16,.9,.2,1), border-color .45s ease, box-shadow .55s cubic-bezier(.16,.9,.2,1);
   transform-style:preserve-3d;will-change:transform;position:relative;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,0.38), 0 2px 0 rgba(255,255,255,0.03) inset, 0 -1px 0 rgba(0,0,0,0.4) inset;
 }
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:1;
   background:linear-gradient(90deg, transparent, rgba(255,255,255,0.24), transparent);}
@@ -682,6 +683,18 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .gauge-val{font-family:'Fraunces',serif;font-weight:650;font-size:21px;letter-spacing:-0.01em;color:var(--platinum);margin-top:-46px;font-feature-settings:"tnum" 1;}
 .gauge-cap{font-size:9px;color:var(--slate);text-transform:uppercase;letter-spacing:0.12em;margin-top:9px;text-align:center;font-family:'Inter',sans-serif;font-weight:600;}
 
+/* ============ DISCIPLINE SCORE DIAL (3D instrument) ============ */
+.score-card{border-color:rgba(143,247,207,0.18);box-shadow:0 18px 40px rgba(0,0,0,0.38), 0 0 60px rgba(52,232,160,0.06), 0 2px 0 rgba(255,255,255,0.03) inset;}
+.score-dial-wrap{display:flex;align-items:center;gap:34px;flex-wrap:wrap;margin-top:8px;}
+.score-dial{ width:190px;height:190px;flex-shrink:0;perspective:900px; }
+.score-dial svg{ filter:drop-shadow(0 22px 34px rgba(0,0,0,0.55)); transition:transform .5s cubic-bezier(.2,.8,.2,1); transform:rotateX(6deg); }
+.score-dial-info{flex:1;min-width:200px;}
+.score-num{font-family:'Fraunces',serif;font-weight:750;font-size:52px;line-height:1;letter-spacing:-0.02em;color:var(--platinum);
+  text-shadow:0 0 30px rgba(52,232,160,0.25);}
+.score-tier{font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;}
+.score-desc{font-size:12.5px;color:var(--slate);line-height:1.6;margin-top:10px;max-width:420px;}
+@media(max-width:600px){.score-dial{width:150px;height:150px;}.score-num{font-size:40px;}}
+
 /* ============ CALENDAR ============ */
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .cal-head .month-label{font-family:'Fraunces',serif;font-size:17px;font-weight:650;color:var(--platinum);}
@@ -691,6 +704,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .cal-summary{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
 .cal-dow{text-align:center;font-size:9.5px;color:var(--slate-dim);text-transform:uppercase;letter-spacing:0.06em;padding-bottom:4px;}
+.cal-disc-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;}
 .cal-day{ aspect-ratio:1; border-radius:11px; border:1px solid var(--steel); display:flex;flex-direction:column;
   align-items:center;justify-content:center;font-size:12px;color:var(--slate);cursor:default;position:relative;transition:transform .15s ease;
   background:rgba(255,255,255,0.012);}
@@ -805,6 +819,16 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <div class="field">
           <label>Max consecutive losses before stopping</label>
           <input type="number" id="g_maxConsecLosses" min="1" step="1" placeholder="e.g. 2">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Cooling-off period after a loss (min)</label>
+          <input type="number" id="g_coolingOff" min="0" step="1" placeholder="e.g. 30">
+        </div>
+        <div class="field">
+          <label>Max risk per single trade ($)</label>
+          <input type="number" id="g_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100">
         </div>
       </div>
       <div class="hint" id="gateHint" style="margin-bottom:14px;"></div>
@@ -935,6 +959,18 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         </div>
       </div>
 
+      <div class="card tilt score-card" style="margin-top:18px">
+        <h2>Discipline <span class="accent">Score</span><span class="eyebrow">how closely you're following your own rules, on a 0–100 scale</span></h2>
+        <div class="score-dial-wrap">
+          <div class="score-dial" id="scoreDial"></div>
+          <div class="score-dial-info">
+            <div class="score-num" id="scoreNum">—</div>
+            <div class="score-tier" id="scoreTier">Log a trade to begin</div>
+            <div class="score-desc" id="scoreDesc">This score is recalculated live from your loss limits, trade caps, session window, and cooling-off rule — then imputed into the calendar as your daily discipline history.</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card tilt" style="margin-top:18px">
         <h2>Risk <span class="accent">Console</span><span class="eyebrow">live daily gauges</span></h2>
         <div class="gauge-row" id="gaugeRow"></div>
@@ -1050,6 +1086,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="stat" style="flex:none;min-width:110px"><b id="calMonthPnl">$0</b><span>Month P/L</span></div>
           <div class="stat" style="flex:none;min-width:110px"><b id="calMonthTrades">0</b><span>Trades</span></div>
           <div class="stat" style="flex:none;min-width:110px"><b id="calMonthWinRate">0%</b><span>Win rate</span></div>
+          <div class="stat" style="flex:none;min-width:110px"><b id="calMonthDiscipline">—</b><span>Avg. discipline</span></div>
         </div>
         <div class="cal-grid" id="calGrid"></div>
         <div class="cal-detail" id="calDetail"><div class="empty-state">Tap a day with trades to see the detail.</div></div>
@@ -1204,6 +1241,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="field"><label>Minimum reward-to-risk ratio</label><input type="number" id="r_minRR" min="0" step="0.1"></div>
           <div class="field"><label>Max consecutive losing trades</label><input type="number" id="r_maxConsecLosses" min="1" step="1"></div>
         </div>
+        <div class="row2">
+          <div class="field"><label>Cooling-off period after a loss (minutes)</label><input type="number" id="r_coolingOff" min="0" step="1" placeholder="e.g. 30"></div>
+          <div class="field"><label>Max risk per single trade ($)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100"></div>
+        </div>
         <button class="btn btn-primary" onclick="saveRules()">Save Rules</button>
         <div class="hint" id="rulesSavedHint" style="margin-top:10px"></div>
       </div>
@@ -1351,9 +1392,9 @@ const SUPABASE_KEY = "sb_publishable_xSqC_Qa5UFZl9SzDmkTs0A_dNslQNGS";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_STATE = {
-  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null },
+  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
-  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[] },
+  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null },
   trades:[],
   streak:{ count:0, lastGoodDate:null },
   day:{ date:null, tradesCount:0, lossUsed:0, ruleBrokenToday:false },
@@ -1542,6 +1583,7 @@ function hydrateState(row){
   if(!Array.isArray(state.psychology.strategies)) state.psychology.strategies = [];
   if(!Array.isArray(state.psychology.traders)) state.psychology.traders = [];
   if(!Array.isArray(state.psychology.orders)) state.psychology.orders = [];
+  if(!Array.isArray(state.psychology.disciplineHistory)) state.psychology.disciplineHistory = [];
   state.psychology.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
   if(state.psychology.strategies.length===0){
     state.psychology.strategies.push({
@@ -1576,10 +1618,48 @@ async function saveState(){
 
 function todayStr(d){ return (d||new Date()).toISOString().slice(0,10); }
 
+/* ============ DISCIPLINE SCORE ============ */
+function isInCooldown(){
+  const mins = state.rules.coolingOffMinutes;
+  const last = state.psychology.lastLossAt;
+  if(!mins || !last) return false;
+  return (Date.now() - last) / 60000 < mins;
+}
+function cooldownMinutesRemaining(){
+  const mins = state.rules.coolingOffMinutes;
+  const last = state.psychology.lastLossAt;
+  if(!mins || !last) return 0;
+  return Math.max(0, Math.ceil(mins - (Date.now() - last) / 60000));
+}
+function computeDisciplineScore(){
+  const r = state.rules;
+  let score = 100;
+  if(r.maxTrades) score -= Math.min(1, state.day.tradesCount / r.maxTrades) * 18;
+  if(r.maxDailyLoss) score -= Math.min(1, state.day.lossUsed / r.maxDailyLoss) * 28;
+  if(r.maxConsecLosses) score -= Math.min(1, state.consecutiveLosses / r.maxConsecLosses) * 18;
+  if(state.session.restrict && !isInSession()) score -= 12;
+  if(isInCooldown()) score -= 12;
+  if(state.day.ruleBrokenToday) score -= 40;
+  return Math.max(0, Math.round(score));
+}
+function disciplineTier(score){
+  if(score>=90) return { label:'Elite', color:'var(--neon-green)' };
+  if(score>=70) return { label:'Disciplined', color:'var(--bronze-bright)' };
+  if(score>=45) return { label:'At Risk', color:'var(--amber)' };
+  return { label:'Critical', color:'var(--loss-bright)' };
+}
+function archiveDisciplineDay(iso, score){
+  const hist = state.psychology.disciplineHistory;
+  const idx = hist.findIndex(h=>h.date===iso);
+  const rec = { date: iso, score, ruleBroken: state.day.ruleBrokenToday, trades: state.day.tradesCount };
+  if(idx>=0) hist[idx] = rec; else hist.push(rec);
+  if(hist.length>365) hist.splice(0, hist.length-365);
+}
 function rolloverDayIfNeeded(){
   const t = todayStr();
   if(state.day.date !== t){
     if(state.day.date && state.day.tradesCount>0){
+      archiveDisciplineDay(state.day.date, computeDisciplineScore());
       if(!state.day.ruleBrokenToday){
         state.streak.count += 1;
         state.streak.lastGoodDate = state.day.date;
@@ -1628,6 +1708,8 @@ async function submitGateRules(){
     hint.style.color = 'var(--loss)';
     return;
   }
+  vals.coolingOffMinutes = numOrNullFrom('g_coolingOff');
+  vals.maxRiskPerTrade = numOrNullFrom('g_maxRiskPerTrade');
   state.rules = vals;
   state.rulesCompleted = true;
   await saveState();
@@ -1724,7 +1806,7 @@ function animateCount(el, from, to, isMoney, decimals){
 function renderAll(){
   renderTraderFilterOptions();
   renderDashboard(); renderRulesForm(); renderSessionForm(); renderPsychologyForm(); renderJournal(); updateSessionPill();
-  renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges();
+  renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges(); renderDisciplineScore();
   renderEquityChart('equityChartOverview','equityTotalOverview','equitySubOverview');
   renderEquityChart('equityChart','equityTotal','equitySub');
   renderOrders(); renderConfluence();
@@ -1781,6 +1863,8 @@ function renderRulesForm(){
   document.getElementById('r_riskPerTrade').value = state.rules.riskPerTrade ?? '';
   document.getElementById('r_minRR').value = state.rules.minRR ?? '';
   document.getElementById('r_maxConsecLosses').value = state.rules.maxConsecLosses ?? '';
+  document.getElementById('r_coolingOff').value = state.rules.coolingOffMinutes ?? '';
+  document.getElementById('r_maxRiskPerTrade').value = state.rules.maxRiskPerTrade ?? '';
   updateRulesRiskPreview();
 }
 async function saveRules(){
@@ -1791,6 +1875,8 @@ async function saveRules(){
     riskPerTrade: numOrNullFrom('r_riskPerTrade'),
     minRR: numOrNullFrom('r_minRR'),
     maxConsecLosses: numOrNullFrom('r_maxConsecLosses'),
+    coolingOffMinutes: numOrNullFrom('r_coolingOff'),
+    maxRiskPerTrade: numOrNullFrom('r_maxRiskPerTrade'),
   };
   await saveState(); renderDashboard(); renderGauges();
   showToast('Rules saved');
@@ -2333,6 +2419,53 @@ function setEquityStats(trades, maxDD){
   if(ddEl) ddEl.textContent = '$'+Math.round(maxDD||0);
 }
 
+/* ============ DISCIPLINE SCORE DIAL (large 3D instrument) ============ */
+function scoreDialSVG(score){
+  const r = 74, C = 2*Math.PI*r;
+  const pct = Math.max(0, Math.min(1, score/100));
+  const dash = C*pct*0.75; // 270-degree sweep
+  const arcTotal = C*0.75;
+  const color = score>=90?['#8ff7cf','#39ffb0'] : score>=70?['#8ff7cf','#2fe3ff'] : score>=45?['#ffd39a','#ffb454'] : ['#ff8c98','#e2596b'];
+  const glow = score>=90?'rgba(57,255,176,0.55)' : score>=70?'rgba(47,227,255,0.5)' : score>=45?'rgba(255,180,84,0.5)' : 'rgba(226,89,107,0.55)';
+  const needleAngle = -135 + pct*270;
+  return `
+  <svg viewBox="0 0 190 190" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="scoreBezel" cx="35%" cy="28%" r="75%">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.14)"/>
+        <stop offset="55%" stop-color="rgba(20,40,35,0.4)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.55)"/>
+      </radialGradient>
+      <linearGradient id="scoreRing" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${color[0]}"/>
+        <stop offset="100%" stop-color="${color[1]}"/>
+      </linearGradient>
+    </defs>
+    <circle cx="95" cy="95" r="88" fill="url(#scoreBezel)" stroke="var(--steel-hi)" stroke-width="1.5"/>
+    <circle cx="95" cy="95" r="66" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"
+      stroke-dasharray="${arcTotal} ${C-arcTotal}" stroke-linecap="round" transform="rotate(135 95 95)"/>
+    <circle cx="95" cy="95" r="66" fill="none" stroke="url(#scoreRing)" stroke-width="12" stroke-linecap="round"
+      stroke-dasharray="${dash} ${C-dash}" transform="rotate(135 95 95)"
+      style="transition:stroke-dasharray .8s cubic-bezier(.16,.9,.2,1); filter:drop-shadow(0 0 10px ${glow})"/>
+    <g style="transition:transform .8s cubic-bezier(.16,.9,.2,1)" transform="rotate(${needleAngle} 95 95)">
+      <line x1="95" y1="95" x2="95" y2="34" stroke="${color[1]}" stroke-width="2.5" stroke-linecap="round" style="filter:drop-shadow(0 0 6px ${glow})"/>
+    </g>
+    <circle cx="95" cy="95" r="9" fill="url(#scoreRing)" style="filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5))"/>
+    <circle cx="95" cy="95" r="4" fill="rgba(255,255,255,0.6)"/>
+  </svg>`;
+}
+function renderDisciplineScore(){
+  const dial = document.getElementById('scoreDial');
+  if(!dial || !state.day.date) return;
+  const score = computeDisciplineScore();
+  dial.innerHTML = scoreDialSVG(score);
+  document.getElementById('scoreNum').textContent = score;
+  const tier = disciplineTier(score);
+  const tierEl = document.getElementById('scoreTier');
+  tierEl.textContent = tier.label;
+  tierEl.style.color = tier.color;
+}
+
 /* ============ RISK GAUGES (brass instrument dials) ============ */
 function ringGauge(pct, colorClass, id){
   const r = 46, C = 2*Math.PI*r;
@@ -2385,6 +2518,13 @@ function renderGauges(){
   units.push({ id:'gBal', pct:ddPct, cls: ddPct>=1?'bad':(ddPct>=0.6?'warn':'good'),
     val: bal ? (state.day.lossUsed/bal*100).toFixed(1)+'%' : '—', cap:'Of balance risked today' });
 
+  if(state.rules.coolingOffMinutes!=null){
+    const remaining = cooldownMinutesRemaining();
+    const cPct = state.rules.coolingOffMinutes ? Math.min(1, remaining/state.rules.coolingOffMinutes) : 0;
+    units.push({ id:'gCool', pct:cPct, cls: cPct>0.5?'bad':(cPct>0?'warn':'good'),
+      val: remaining>0 ? `${remaining}m left` : 'Clear', cap:'Cooling-off after loss' });
+  }
+
   row.innerHTML = units.map(u=>`
     <div class="gauge-unit">
       ${ringGauge(u.pct, u.cls, u.id)}
@@ -2412,7 +2552,7 @@ function updateSessionPill(){
   const lcs = document.getElementById('liveClockSub');
   if(lcs) lcs.textContent = inSession ? 'Inside your defined trading window' : (state.session.restrict ? 'Outside window — trading is restricted' : 'Outside window — restriction is off');
 }
-setInterval(updateSessionPill, 1000);
+setInterval(()=>{ updateSessionPill(); if(currentUser && state.rules.coolingOffMinutes!=null) renderGauges(); }, 1000);
 
 /* ============ PRE-TRADE CHECK ============ */
 function openPretrade(){
@@ -2437,6 +2577,11 @@ function openPretrade(){
     const fail = !isInSession();
     if(fail) violated = true;
     checks.push({label:`Inside trading session (${state.session.start}–${state.session.end})`, fail});
+  }
+  if(state.rules.coolingOffMinutes!=null){
+    const fail = isInCooldown();
+    if(fail) violated = true;
+    checks.push({label: fail ? `Cooling-off period (${cooldownMinutesRemaining()} min remaining)` : `Cooling-off period observed`, fail});
   }
   document.getElementById('checkList').innerHTML = checks.map(c=>`
     <div class="check-item ${c.fail?'fail':'pass'}"><span>${c.fail?'✕':'✓'}</span><span>${c.label}</span></div>`).join('');
@@ -2490,10 +2635,12 @@ async function submitTrade(){
   const now = new Date();
   let brokeRuleThisTrade = pendingViolation;
   if(state.rules.minRR!=null && rr!=='' && parseFloat(rr) < state.rules.minRR) brokeRuleThisTrade = true;
+  if(result==='loss' && state.rules.maxRiskPerTrade!=null && lossAmount > state.rules.maxRiskPerTrade) brokeRuleThisTrade = true;
 
   state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics });
   state.day.tradesCount += 1;
-  if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; } else { state.consecutiveLosses = 0; }
+  if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; state.psychology.lastLossAt = Date.now(); } else { state.consecutiveLosses = 0; }
+  archiveDisciplineDay(state.day.date, computeDisciplineScore());
 
   if(closingOrderId){
     state.psychology.orders = state.psychology.orders.filter(o=>o.id!==closingOrderId);
@@ -2640,20 +2787,31 @@ function renderCalendar(){
   const dows = ['S','M','T','W','T','F','S'];
   let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
   for(let i=0;i<startDow;i++) html += '<div class="cal-day empty"></div>';
+  const disciplineByDay = {};
+  (state.psychology.disciplineHistory||[]).forEach(h=>{ disciplineByDay[h.date]=h; });
+  if(state.day.date) disciplineByDay[state.day.date] = { date: state.day.date, score: computeDisciplineScore(), ruleBroken: state.day.ruleBrokenToday, trades: state.day.tradesCount };
   const todayIso = todayStr();
-  let monthPnl = 0, monthTrades = 0, monthWins = 0;
+  let monthPnl = 0, monthTrades = 0, monthWins = 0, monthScoreSum = 0, monthScoreCount = 0;
   for(let day=1; day<=daysInMonth; day++){
     const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dayTrades = byDay[iso] || [];
     const dayPnl = dayTrades.reduce((s,t)=>s+pnlOf(t),0);
     monthPnl += dayPnl; monthTrades += dayTrades.length; monthWins += dayTrades.filter(t=>t.result==='win').length;
+    const disc = disciplineByDay[iso];
     let cls = 'cal-day';
     if(dayTrades.length){
       cls += ' has-trades';
       cls += dayPnl>=0 ? ' win-day' : ' loss-day';
     }
     if(iso===todayIso) cls += ' today';
+    let discDot = '';
+    if(disc){
+      monthScoreSum += disc.score; monthScoreCount++;
+      const tier = disciplineTier(disc.score);
+      discDot = `<div class="cal-disc-dot" style="background:${tier.color};box-shadow:0 0 7px ${tier.color}" title="Discipline score: ${disc.score}"></div>`;
+    }
     html += `<div class="${cls}" ${dayTrades.length?`onclick="showCalDay('${iso}')"`:''}>
+      ${discDot}
       <div class="n">${day}</div>
       ${dayTrades.length?`<div class="pnl">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>`:''}
     </div>`;
@@ -2663,6 +2821,8 @@ function renderCalendar(){
   document.getElementById('calMonthPnl').style.color = monthPnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
   document.getElementById('calMonthTrades').textContent = monthTrades;
   document.getElementById('calMonthWinRate').textContent = monthTrades ? Math.round(monthWins/monthTrades*100)+'%' : '0%';
+  const avgScoreEl = document.getElementById('calMonthDiscipline');
+  if(avgScoreEl) avgScoreEl.textContent = monthScoreCount ? Math.round(monthScoreSum/monthScoreCount) : '—';
   document.getElementById('calDetail').innerHTML = '<div class="empty-state">Tap a day with trades to see the detail.</div>';
 }
 function showCalDay(iso){
@@ -2670,11 +2830,15 @@ function showCalDay(iso){
   const wins = trades.filter(t=>t.result==='win').length;
   const losses = trades.length-wins;
   const dayPnl = trades.reduce((s,t)=>s+pnlOf(t),0);
+  const disc = state.day.date===iso ? { score: computeDisciplineScore() } : (state.psychology.disciplineHistory||[]).find(h=>h.date===iso);
   const detail = document.getElementById('calDetail');
   detail.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:'Fraunces',serif;font-weight:650;font-size:15px;color:var(--platinum);">${iso} · ${wins}W / ${losses}L</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:${dayPnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        ${disc ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${disciplineTier(disc.score).color}">Discipline ${disc.score}/100</div>` : ''}
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:${dayPnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>
+      </div>
     </div>
     <div class="trade-list" style="max-height:260px">
       ${trades.map(t=>{ const pnl = pnlOf(t); const typeInfo = STRATEGY_TYPES[t.strategyType]; return `
