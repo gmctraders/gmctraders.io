@@ -516,6 +516,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .trade-tags{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;}
 .tag-chip{font-size:9.5px;padding:2px 8px;border-radius:100px;background:rgba(52,232,160,0.1);color:var(--bronze-bright);border:1px solid rgba(52,232,160,0.25);text-transform:uppercase;letter-spacing:0.04em;}
 .tag-chip.trader{background:rgba(139,144,160,0.12);color:#c7cbd8;border-color:rgba(139,144,160,0.28);}
+.tag-chip.mood{background:rgba(255,180,84,0.1);color:var(--amber);border-color:rgba(255,180,84,0.28);text-transform:none;letter-spacing:0.01em;}
 .trade-pnl{font-family:'IBM Plex Mono',monospace;font-size:13px;flex-shrink:0;text-align:right;}
 .trade-pnl b{display:block;font-size:13.5px;}
 .trade-pnl .rr{font-size:10.5px;color:var(--slate);}
@@ -532,6 +533,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 }
 .logic-chip:hover{border-color:var(--steel-hi);color:var(--platinum);}
 .logic-chip-dot{width:6px;height:6px;border-radius:50%;background:var(--slate-dim);flex-shrink:0;transition:background .18s ease;}
+.mood-grid{display:flex;gap:8px;flex-wrap:wrap;}
+.mood-chip{padding:8px 14px;border-radius:100px;font-size:12.5px;font-weight:600;background:rgba(255,255,255,0.03);
+  border:1px solid var(--steel);color:var(--slate);cursor:pointer;transition:all .18s cubic-bezier(.2,.8,.2,1);user-select:none;}
+.mood-chip:hover{border-color:var(--steel-hi);color:var(--platinum);}
+.mood-chip.selected{background:linear-gradient(120deg, var(--bronze-bright), var(--bronze));color:var(--bronze-ink);border-color:transparent;box-shadow:0 4px 14px rgba(52,232,160,0.25);}
 .logic-chip.checked{background:rgba(52,232,160,0.14);border-color:rgba(52,232,160,0.5);color:var(--bronze-bright);box-shadow:0 0 0 1px rgba(52,232,160,0.15);}
 .logic-chip.checked .logic-chip-dot{background:var(--neon-green);box-shadow:0 0 6px var(--neon-green);}
 
@@ -1110,6 +1116,40 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <div class="hint" style="margin-bottom:14px">Every logic tag you've selected on a closed trade, ranked by win rate. This is your real edge — not what you think works, but what the numbers say works.</div>
         <div id="confluenceList"></div>
       </div>
+      <div class="card tilt" style="margin-top:18px">
+        <h2>Discipline <span class="accent">Trend</span><span class="eyebrow">weekly average score, imputed from every trading day</span></h2>
+        <div class="chart3d-wrap"><div class="chart3d" id="disciplineTrendChart"></div></div>
+        <div class="hint" id="disciplineTrendHint" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card tilt" style="margin-top:18px">
+        <h2>Mindset <span class="accent">vs Outcome</span><span class="eyebrow">win rate by emotional state at entry</span></h2>
+        <div class="hint" style="margin-bottom:14px">Tag your mindset when you close a trade. Over time this shows whether calm, planned entries actually outperform emotional ones — usually the most honest chart in the whole journal.</div>
+        <div id="moodList"></div>
+      </div>
+
+      <div class="card tilt" style="margin-top:18px">
+        <h2>Timing <span class="accent">Edge</span><span class="eyebrow">performance by hour and day of week</span></h2>
+        <div class="row2">
+          <div>
+            <div class="hint" style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;color:var(--slate)">By day of week</div>
+            <table class="lead-table" id="dowTable"><tbody></tbody></table>
+          </div>
+          <div>
+            <div class="hint" style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;color:var(--slate)">By hour of day</div>
+            <table class="lead-table" id="hourTable"><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card tilt" style="margin-top:18px">
+        <h2>Export <span class="accent">Your Data</span><span class="eyebrow">trades &amp; discipline history</span></h2>
+        <div class="hint" style="margin-bottom:14px">Download everything you've logged as CSV — for your own records, a coach, or a prop-firm review.</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1" onclick="exportTradesCSV()">Export Trades (CSV)</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="exportDisciplineCSV()">Export Discipline History (CSV)</button>
+        </div>
+      </div>
     </div>
 
     <!-- CALENDAR -->
@@ -1420,6 +1460,17 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <div class="field" id="lossAmountField"><label>Amount lost ($)</label><input type="number" step="1" id="t_lossAmount" placeholder="e.g. 40"></div>
       <div class="field" id="winAmountField"><label>Amount won ($)</label><input type="number" step="1" id="t_winAmount" placeholder="e.g. 80"></div>
     </div>
+    <div class="field">
+      <label>Mindset while placing this trade</label>
+      <div class="mood-grid" id="tradeMoodChoices">
+        <div class="mood-chip" data-mood="calm" onclick="selectMood('calm')">😌 Calm</div>
+        <div class="mood-chip" data-mood="confident" onclick="selectMood('confident')">💪 Confident</div>
+        <div class="mood-chip" data-mood="fomo" onclick="selectMood('fomo')">😬 FOMO</div>
+        <div class="mood-chip" data-mood="revenge" onclick="selectMood('revenge')">😡 Revenge</div>
+        <div class="mood-chip" data-mood="bored" onclick="selectMood('bored')">🥱 Bored</div>
+        <div class="mood-chip" data-mood="anxious" onclick="selectMood('anxious')">😰 Anxious</div>
+      </div>
+    </div>
     <div class="field"><label>Notes</label><textarea id="t_notes" placeholder="Setup, mindset, anything worth remembering."></textarea></div>
     <div class="btn-row">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('tradeOverlay')">Cancel</button>
@@ -1452,6 +1503,16 @@ let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let currentUser = null;
 let pendingViolation = false;
 let closingOrderId = null;
+let selectedMood = null;
+const MOOD_LABELS = { calm:'😌 Calm', confident:'💪 Confident', fomo:'😬 FOMO', revenge:'😡 Revenge', bored:'🥱 Bored', anxious:'😰 Anxious' };
+function selectMood(mood){
+  selectedMood = selectedMood===mood ? null : mood;
+  document.querySelectorAll('#tradeMoodChoices .mood-chip').forEach(c=>c.classList.toggle('selected', c.dataset.mood===selectedMood));
+}
+function resetMoodChoices(preselected){
+  selectedMood = preselected || null;
+  document.querySelectorAll('#tradeMoodChoices .mood-chip').forEach(c=>c.classList.toggle('selected', c.dataset.mood===selectedMood));
+}
 let authMode = 'signin';
 let calViewDate = new Date();
 let activeTraderFilter = 'all';
@@ -2159,6 +2220,7 @@ function renderJournal(){
             ${t.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>` : ''}
             ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
             ${(t.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
+            ${t.mood ? `<span class="tag-chip mood">${MOOD_LABELS[t.mood]||t.mood}</span>` : ''}
           </div>
         </div>
         <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
@@ -2253,6 +2315,166 @@ function renderConfluence(){
 const tooltipEl = ()=>document.getElementById('chartTooltip');
 function showTip(x,y,html){ const t=tooltipEl(); t.innerHTML=html; t.style.left=x+'px'; t.style.top=y+'px'; t.classList.add('show'); }
 function hideTip(){ tooltipEl().classList.remove('show'); }
+
+/* ============ DISCIPLINE TREND (weekly, 3D bars) ============ */
+function isoWeekKey(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const day = (d.getDay()+6)%7; // Mon=0
+  d.setDate(d.getDate()-day);
+  return todayStr(d);
+}
+function renderDisciplineTrend(){
+  const el = document.getElementById('disciplineTrendChart');
+  if(!el) return;
+  const hist = (state.psychology.disciplineHistory||[]).slice();
+  if(state.day.date) hist.push({date:state.day.date, score:computeDisciplineScore()});
+  if(hist.length===0){
+    el.innerHTML = '<div class="empty-state">Log trades across a few days to see your weekly discipline trend.</div>';
+    document.getElementById('disciplineTrendHint').textContent='';
+    return;
+  }
+  const weekMap = {};
+  hist.forEach(h=>{ const wk = isoWeekKey(h.date); if(!weekMap[wk]) weekMap[wk]=[]; weekMap[wk].push(h.score); });
+  const weeks = Object.keys(weekMap).sort().slice(-8);
+  const avgs = weeks.map(w=> Math.round(weekMap[w].reduce((a,b)=>a+b,0)/weekMap[w].length));
+  el.innerHTML = weeks.map((w,i)=>{
+    const score = avgs[i];
+    const tier = disciplineTier(score);
+    const label = new Date(w+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    return `
+      <div class="bar3d-group">
+        <div class="bar3d-pair">
+          <div class="bar3d-plinth"></div>
+          <div class="bar3d win" data-tip="Week of ${label} · avg ${score}/100" style="height:0px;--bar-color:${tier.color}"><div class="face front"></div><div class="face top"></div><div class="face side"></div></div>
+        </div>
+        <div class="bar3d-label">${label}</div>
+      </div>`;
+  }).join('');
+  requestAnimationFrame(()=>{
+    const bars = el.querySelectorAll('.bar3d');
+    avgs.forEach((score,i)=>{ bars[i].style.height = Math.max(6, Math.round(score/100*150))+'px'; bars[i].style.background = 'var(--bar-color)'; });
+  });
+  el.querySelectorAll('.bar3d').forEach(bar=>{
+    bar.addEventListener('mousemove', (e)=>{ showTip(e.clientX, e.clientY, `<b>${bar.dataset.tip}</b>`); });
+    bar.addEventListener('mouseleave', hideTip);
+  });
+  const first = avgs[0], last = avgs[avgs.length-1];
+  const hintEl = document.getElementById('disciplineTrendHint');
+  if(avgs.length>1){
+    const delta = last-first;
+    hintEl.textContent = delta>0 ? `Trending up — average discipline improved by ${delta} points since your first tracked week.`
+      : delta<0 ? `Trending down — average discipline dropped by ${Math.abs(delta)} points since your first tracked week. Worth reviewing what changed.`
+      : `Holding steady around ${last}/100 across the tracked period.`;
+  } else { hintEl.textContent = `First week tracked — check back after a few more trading days for a trend.`; }
+}
+
+/* ============ MINDSET / MOOD BREAKDOWN ============ */
+function buildMoodStats(){
+  const trades = filteredTrades().filter(t=>t.mood);
+  const map = {};
+  trades.forEach(t=>{
+    if(!map[t.mood]) map[t.mood] = { wins:0, losses:0, trades:0, pnl:0 };
+    map[t.mood].trades++; map[t.mood].pnl += pnlOf(t);
+    if(t.result==='win') map[t.mood].wins++; else map[t.mood].losses++;
+  });
+  return Object.entries(map).map(([mood,v])=>({
+    mood, label: MOOD_LABELS[mood]||mood, trades:v.trades, wins:v.wins, losses:v.losses, pnl:v.pnl,
+    winRate: v.trades ? Math.round(v.wins/v.trades*100) : 0
+  })).sort((a,b)=> b.winRate-a.winRate || b.trades-a.trades);
+}
+function renderMoodBreakdown(){
+  const el = document.getElementById('moodList');
+  if(!el) return;
+  const rows = buildMoodStats();
+  if(rows.length===0){
+    el.innerHTML = '<div class="empty-state">Tag your mindset when closing trades to see this breakdown.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r=>{
+    const barColor = r.winRate>=60 ? 'linear-gradient(90deg,var(--win),var(--win-bright))'
+      : r.winRate>=40 ? 'linear-gradient(90deg,var(--amber),#ffd39a)'
+      : 'linear-gradient(90deg,var(--loss),var(--loss-bright))';
+    return `
+    <div class="confluence-row">
+      <div class="confluence-label">${r.label}</div>
+      <div class="confluence-bar-wrap"><div class="confluence-bar" style="width:${r.winRate}%;background:${barColor}"></div></div>
+      <div class="confluence-stats"><b>${r.winRate}%</b><span>${r.wins}W / ${r.losses}L · ${r.trades} trades · ${r.pnl>=0?'+$':'-$'}${Math.abs(r.pnl).toFixed(0)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+/* ============ TIMING EDGE (day of week / hour) ============ */
+function parseTradeHour(timeStr){
+  if(!timeStr) return null;
+  const m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+  if(!m) return null;
+  let h = parseInt(m[1],10);
+  const ampm = (m[3]||'').toUpperCase();
+  if(ampm==='PM' && h!==12) h+=12;
+  if(ampm==='AM' && h===12) h=0;
+  return h;
+}
+function renderTimingBreakdown(){
+  const trades = filteredTrades();
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dowMap = {}; DOW.forEach(d=>dowMap[d]={wins:0,losses:0,trades:0,pnl:0});
+  const hourMap = {};
+  trades.forEach(t=>{
+    const d = new Date(t.date+'T00:00:00');
+    const dname = DOW[d.getDay()];
+    dowMap[dname].trades++; dowMap[dname].pnl += pnlOf(t);
+    if(t.result==='win') dowMap[dname].wins++; else dowMap[dname].losses++;
+    const h = parseTradeHour(t.time);
+    if(h!=null){
+      if(!hourMap[h]) hourMap[h] = {wins:0,losses:0,trades:0,pnl:0};
+      hourMap[h].trades++; hourMap[h].pnl += pnlOf(t);
+      if(t.result==='win') hourMap[h].wins++; else hourMap[h].losses++;
+    }
+  });
+  const dowRows = DOW.filter(d=>dowMap[d].trades>0).map(d=>({name:d, ...dowMap[d], winRate: Math.round(dowMap[d].wins/dowMap[d].trades*100)}));
+  const hourRows = Object.keys(hourMap).map(h=>({name: (h%12===0?12:h%12)+(h<12?' AM':' PM'), ...hourMap[h], winRate: Math.round(hourMap[h].wins/hourMap[h].trades*100)}))
+    .sort((a,b)=> parseInt(a.name)-parseInt(b.name));
+  const renderTimingRows = (rows, tbodySelector)=>{
+    const tbody = document.querySelector(tbodySelector);
+    if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="4" style="color:var(--slate);font-size:12px;padding:12px 10px;">No trades yet</td></tr>'; return; }
+    tbody.innerHTML = '<tr><th>When</th><th>Trades</th><th>Win%</th><th>P/L</th></tr>' + rows.map(r=>`
+      <tr><td class="lead-name">${r.name}</td><td>${r.trades}</td><td>${r.winRate}%</td>
+      <td style="color:${r.pnl>=0?'var(--win-bright)':'var(--loss-bright)'};font-family:'IBM Plex Mono',monospace">${r.pnl>=0?'+$':'-$'}${Math.abs(r.pnl).toFixed(0)}</td></tr>`).join('');
+  };
+  renderTimingRows(dowRows, '#dowTable tbody');
+  renderTimingRows(hourRows, '#hourTable tbody');
+}
+
+/* ============ CSV EXPORT ============ */
+function downloadCSV(filename, rows){
+  const csv = rows.map(r=>r.map(cell=>{
+    const s = String(cell ?? '');
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function exportTradesCSV(){
+  const rows = [['Date','Time','Result','Trader','Strategy','Strategy Type','RR','Win $','Loss $','P/L','Mood','Logic Tags','Notes']];
+  filteredTrades().forEach(t=>{
+    rows.push([t.date, t.time, t.result, traderName(t.trader), strategyName(t.strategy)||'', t.strategyType||'', t.rr ?? '',
+      t.winAmount||0, t.lossAmount||0, pnlOf(t).toFixed(2), t.mood ? (MOOD_LABELS[t.mood]||t.mood) : '', (t.logics||[]).map(logicLabel).join('; '), t.notes||'']);
+  });
+  downloadCSV('ghost-discipline-trades.csv', rows);
+  showToast('Trades exported');
+}
+function exportDisciplineCSV(){
+  const hist = (state.psychology.disciplineHistory||[]).slice();
+  if(state.day.date) hist.push({date:state.day.date, score:computeDisciplineScore(), ruleBroken:state.day.ruleBrokenToday, trades:state.day.tradesCount});
+  const rows = [['Date','Discipline Score','Rule Broken','Trades That Day']];
+  hist.sort((a,b)=>a.date<b.date?-1:1).forEach(h=> rows.push([h.date, h.score, h.ruleBroken?'Yes':'No', h.trades ?? '']));
+  downloadCSV('ghost-discipline-history.csv', rows);
+  showToast('Discipline history exported');
+}
 
 /* ============ 3D WIN/LOSS BAR CHART ============ */
 function renderDashChart(){
@@ -2692,6 +2914,7 @@ function proceedToTrade(){
   document.getElementById('t_winAmount').value=''; document.getElementById('t_winAmount').dataset.touched='';
   document.getElementById('t_notes').value='';
   document.getElementById('t_result').value='win'; onResultChange();
+  resetMoodChoices(null);
   populateTradeSelectors();
   updateTradeRiskPreview();
   onStrategyChange();
@@ -2721,7 +2944,7 @@ async function submitTrade(){
   if(state.rules.minRR!=null && rr!=='' && parseFloat(rr) < state.rules.minRR) brokeRuleThisTrade = true;
   if(result==='loss' && state.rules.maxRiskPerTrade!=null && lossAmount > state.rules.maxRiskPerTrade) brokeRuleThisTrade = true;
 
-  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics });
+  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics, mood: selectedMood });
   state.day.tradesCount += 1;
   if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; state.psychology.lastLossAt = Date.now(); } else { state.consecutiveLosses = 0; }
   archiveDisciplineDay(state.day.date, computeDisciplineScore());
@@ -2824,6 +3047,7 @@ function closeOrder(id, result){
   document.getElementById('t_lossAmount').value=''; document.getElementById('t_lossAmount').dataset.touched='';
   document.getElementById('t_winAmount').value=''; document.getElementById('t_winAmount').dataset.touched='';
   document.getElementById('t_notes').value = order.notes || '';
+  resetMoodChoices(null);
   updateTradeRiskPreview();
   document.getElementById('tradeOverlay').classList.add('show');
 }
@@ -2936,6 +3160,7 @@ function showCalDay(iso){
               ${t.strategy?`<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>`:''}
               ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
               ${(t.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
+              ${t.mood ? `<span class="tag-chip mood">${MOOD_LABELS[t.mood]||t.mood}</span>` : ''}
             </div>
           </div>
           <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
