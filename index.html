@@ -824,6 +824,9 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <label>Password</label>
         <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
       </div>
+      <div style="text-align:right;margin:-8px 0 16px 0;">
+        <a href="javascript:void(0)" onclick="handleForgotPassword()" style="font-size:12px;color:var(--slate);text-decoration:underline;">Forgot password?</a>
+      </div>
       <button class="btn-gold" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
       <div class="auth-foot">Access is by invitation only. Your data is private to your account, secured by row-level access control.</div>
     </div>
@@ -1641,15 +1644,42 @@ async function handleAuthSubmit(){
   btn.disabled = false;
 }
 
+async function handleForgotPassword(){
+  const email = document.getElementById('authEmail').value.trim();
+  if(!email){
+    showAuthMsg('Enter your email above first, then click "Forgot password?" again.', 'error');
+    return;
+  }
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  try{
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if(error) throw error;
+    showAuthMsg('If that email has an account, a reset link is on its way — check your inbox.', 'info');
+  }catch(e){
+    showAuthMsg(e.message || 'Something went wrong. Try again.', 'error');
+  }
+  btn.disabled = false;
+}
+
 /* ============ INVITE / SET PASSWORD FLOW ============ */
 function getHashParams(){
   const raw = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
   return new URLSearchParams(raw);
 }
-function showSetPasswordScreen(user){
+function showSetPasswordScreen(user, linkType){
   document.getElementById('authScreen').style.display = 'none';
   const label = document.getElementById('setPasswordEmailLabel');
-  if(label && user && user.email) label.textContent = `Set a password for ${user.email} to finish activating your access.`;
+  const title = document.querySelector('#setPasswordScreen .auth-title');
+  const isReset = linkType === 'recovery';
+  if(title) title.textContent = isReset ? 'Reset Your Password' : 'Activate Your Account';
+  if(label && user && user.email){
+    label.textContent = isReset
+      ? `Choose a new password for ${user.email}.`
+      : `Set a password for ${user.email} to finish activating your access.`;
+  }
   document.getElementById('setPasswordScreen').style.display = 'flex';
 }
 function showSetPasswordMsg(text, type){
@@ -3223,7 +3253,7 @@ function showCalDay(iso){
   const { data } = await sb.auth.getSession();
   if(data.session){
     if(linkType === 'invite' || linkType === 'recovery'){
-      showSetPasswordScreen(data.session.user);
+      showSetPasswordScreen(data.session.user, linkType);
     } else {
       await onAuthed(data.session.user);
     }
