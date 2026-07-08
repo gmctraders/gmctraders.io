@@ -751,10 +751,36 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .score-dial svg{ filter:drop-shadow(0 22px 34px rgba(0,0,0,0.55)); transition:transform .5s cubic-bezier(.2,.8,.2,1); transform:rotateX(6deg); }
 .score-dial-info{flex:1;min-width:200px;}
 .score-num{font-family:'Fraunces',serif;font-weight:750;font-size:60px;line-height:1;letter-spacing:-0.022em;font-variation-settings:"opsz" 144;text-shadow:0 0 30px rgba(16,185,129,0.16);color:var(--platinum);
-  text-shadow:0 0 30px rgba(16,185,129,0.25);}
-.score-tier{font-family:'Instrument Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;}
+  text-shadow:0 0 30px rgba(16,185,129,0.25); transition:text-shadow .4s ease;}
+.score-num.elite{ text-shadow:0 0 26px rgba(45,212,191,0.55), 0 0 52px rgba(16,185,129,0.35); }
+.score-tier{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'Instrument Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+  margin-top:8px;padding:4px 4px;border-radius:100px;border:1px solid transparent;transition:all .35s ease;
+}
+.score-tier.elite{
+  color:#052e21;padding:6px 14px;border-color:rgba(45,212,191,0.55);
+  background:linear-gradient(120deg, var(--neon-cyan), var(--neon-green), var(--neon-cyan));
+  background-size:220% 100%;
+  animation:eliteShimmer 3.2s linear infinite, eliteTierGlow 2.4s ease-in-out infinite;
+}
+@keyframes eliteShimmer{ 0%{background-position:0% 50%;} 100%{background-position:220% 50%;} }
+@keyframes eliteTierGlow{
+  0%,100%{box-shadow:0 0 12px rgba(45,212,191,0.4), 0 0 24px rgba(16,185,129,0.22), inset 0 1px 0 rgba(255,255,255,0.35);}
+  50%{box-shadow:0 0 20px rgba(45,212,191,0.75), 0 0 44px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.5);}
+}
 .score-desc{font-size:12.5px;color:var(--slate);line-height:1.6;margin-top:10px;max-width:420px;}
 @media(max-width:600px){.score-dial{width:170px;height:170px;}.score-num{font-size:44px;}}
+
+/* ============ ELITE PREMIUM CARD GLOW ============ */
+.score-card.elite{
+  border-color:rgba(45,212,191,0.45);
+  animation:eliteCardPulse 3.4s ease-in-out infinite;
+}
+@keyframes eliteCardPulse{
+  0%,100%{box-shadow:0 18px 40px rgba(0,0,0,0.38), 0 0 46px rgba(45,212,191,0.14), 0 0 70px rgba(16,185,129,0.08), 0 2px 0 rgba(255,255,255,0.03) inset;}
+  50%{box-shadow:0 18px 40px rgba(0,0,0,0.38), 0 0 70px rgba(45,212,191,0.32), 0 0 110px rgba(16,185,129,0.18), 0 2px 0 rgba(255,255,255,0.03) inset;}
+}
 
 /* ============ CALENDAR ============ */
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -1853,7 +1879,7 @@ function computeDisciplineScore(){
   return Math.max(0, Math.round(score));
 }
 function disciplineTier(score){
-  if(score>=90) return { label:'Elite', color:'var(--neon-green)' };
+  if(score>=90) return { label:'Elite', color:'var(--neon-cyan)', elite:true };
   if(score>=70) return { label:'Disciplined', color:'var(--bronze-bright)' };
   if(score>=45) return { label:'At Risk', color:'var(--amber)' };
   return { label:'Critical', color:'var(--loss-bright)' };
@@ -2869,11 +2895,16 @@ function renderDisciplineScore(){
   if(!dial || !state.day.date) return;
   const score = computeDisciplineScore();
   dial.innerHTML = scoreDialSVG(score);
-  document.getElementById('scoreNum').textContent = score;
+  const numEl = document.getElementById('scoreNum');
+  numEl.textContent = score;
   const tier = disciplineTier(score);
   const tierEl = document.getElementById('scoreTier');
-  tierEl.textContent = tier.label;
-  tierEl.style.color = tier.color;
+  tierEl.textContent = tier.elite ? '✦ '+tier.label+' ✦' : tier.label;
+  tierEl.style.color = tier.elite ? '' : tier.color;
+  tierEl.classList.toggle('elite', !!tier.elite);
+  numEl.classList.toggle('elite', !!tier.elite);
+  const scoreCard = dial.closest('.score-card');
+  if(scoreCard) scoreCard.classList.toggle('elite', !!tier.elite);
 }
 
 /* ============ RISK GAUGES (brass instrument dials) ============ */
