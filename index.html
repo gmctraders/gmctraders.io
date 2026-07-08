@@ -806,6 +806,26 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 
 /* count-up number transition */
 .count-anim{transition:none;}
+
+/* ============ PROP FIRM COMPLIANCE ============ */
+.pf-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:1px solid transparent;}
+.pf-badge.pass{background:rgba(34,197,94,0.12);color:var(--win-bright);border-color:rgba(34,197,94,0.3);}
+.pf-badge.warn{background:rgba(245,166,35,0.12);color:var(--amber);border-color:rgba(245,166,35,0.3);}
+.pf-badge.fail{background:rgba(244,63,94,0.12);color:var(--loss-bright);border-color:rgba(244,63,94,0.3);}
+.pf-badge.off{background:rgba(255,255,255,0.05);color:var(--slate);border-color:var(--steel);}
+.pf-metric{border:1px solid var(--steel);border-radius:16px;padding:16px 18px;margin-bottom:12px;}
+.pf-metric-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px;flex-wrap:wrap;}
+.pf-metric-title{font-size:12.5px;font-weight:600;color:var(--platinum);}
+.pf-metric-sub{font-size:10.5px;color:var(--slate);margin-top:2px;}
+.pf-metric-val{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--platinum);white-space:nowrap;}
+.pf-track{width:100%;height:9px;border-radius:100px;background:rgba(255,255,255,0.06);overflow:hidden;position:relative;}
+.pf-fill{height:100%;border-radius:100px;transition:width .5s cubic-bezier(.2,.8,.2,1);background:linear-gradient(90deg,var(--bronze),var(--bronze-bright));}
+.pf-fill.warn{background:linear-gradient(90deg,#a8730f,var(--amber));}
+.pf-fill.fail{background:linear-gradient(90deg,#7f1d2b,var(--loss-bright));}
+.pf-phase-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.pf-phase-chip{padding:8px 14px;border-radius:12px;border:1px solid var(--steel);font-size:12px;color:var(--slate);cursor:pointer;text-align:center;flex:1;min-width:100px;}
+.pf-phase-chip.active{border-color:var(--bronze);color:var(--bronze-bright);background:rgba(16,185,129,0.08);}
+.pf-empty{padding:20px;text-align:center;color:var(--slate);font-size:13px;}
 </style>
 </head>
 <body>
@@ -993,6 +1013,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <button class="side-navbtn" data-view="rules">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/></svg>
         Rule Builder
+      </button>
+      <button class="side-navbtn" data-view="propfirm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V10l5-4 5 4v11"/><path d="M15 21v-7l4-3v10"/></svg>
+        Prop Firm
       </button>
       <button class="side-navbtn" data-view="session">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
@@ -1401,6 +1425,52 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </div>
     </div>
 
+    <!-- PROP FIRM COMPLIANCE -->
+    <div class="view" id="view-propfirm">
+      <div class="topbar-row">
+        <div>
+          <h2 class="page-title">Prop Firm Compliance</h2>
+          <div class="page-sub">Know your numbers before the firm does.</div>
+        </div>
+        <div id="pfHeaderBadge" class="pf-badge off">Not configured</div>
+      </div>
+
+      <div class="card tilt">
+        <h2>Challenge <span class="accent">Setup</span></h2>
+        <div class="row2">
+          <div class="field"><label>Prop firm name</label><input type="text" id="pf_firmName" placeholder="e.g. FTMO, MFF, Apex"></div>
+          <div class="field"><label>Starting account size ($)</label><input type="number" id="pf_startingBalance" min="0" step="1"></div>
+        </div>
+        <div class="pf-phase-row" id="pfPhaseRow">
+          <div class="pf-phase-chip" data-phase="challenge" onclick="setPfPhase('challenge')">Challenge</div>
+          <div class="pf-phase-chip" data-phase="verification" onclick="setPfPhase('verification')">Verification</div>
+          <div class="pf-phase-chip" data-phase="funded" onclick="setPfPhase('funded')">Funded</div>
+        </div>
+        <div class="row2" style="margin-top:14px;">
+          <div class="field"><label>Profit target (%)</label><input type="number" id="pf_profitTarget" min="0" step="0.1" placeholder="e.g. 10"></div>
+          <div class="field"><label>Max daily loss (%)</label><input type="number" id="pf_maxDailyLossPct" min="0" step="0.1" placeholder="e.g. 5"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Max overall drawdown (%)</label><input type="number" id="pf_maxOverallDrawdownPct" min="0" step="0.1" placeholder="e.g. 10"></div>
+          <div class="field">
+            <label>Drawdown type</label>
+            <select id="pf_drawdownType">
+              <option value="static">Static (from start balance)</option>
+              <option value="trailing">Trailing (from equity peak)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Minimum trading days</label><input type="number" id="pf_minTradingDays" min="0" step="1" placeholder="e.g. 4"></div>
+          <div class="field"><label>Consistency rule — max % of profit from one day</label><input type="number" id="pf_consistencyRulePct" min="0" step="1" placeholder="e.g. 30"></div>
+        </div>
+        <button class="btn btn-primary" onclick="savePropFirm()">Save Challenge Rules</button>
+        <div class="hint" id="pfSavedHint" style="margin-top:10px"></div>
+      </div>
+
+      <div id="pfComplianceWrap" style="margin-top:18px;"></div>
+    </div>
+
     <!-- SESSION -->
     <div class="view" id="view-session">
       <div class="topbar-row">
@@ -1555,6 +1625,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_STATE = {
   rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null },
+  propFirm:{ firmName:'', phase:'challenge', startingBalance:null, profitTarget:null, maxDailyLossPct:null, maxOverallDrawdownPct:null, drawdownType:'static', minTradingDays:null, consistencyRulePct:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
   psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null },
   trades:[],
@@ -1780,6 +1851,7 @@ async function loadOrCreateTraderData(){
     const { data: created, error: insertErr } = await sb.from('trader_data').insert({
       user_id: currentUser.id,
       rules: DEFAULT_STATE.rules,
+      prop_firm: DEFAULT_STATE.propFirm,
       session: DEFAULT_STATE.session,
       psychology: DEFAULT_STATE.psychology,
       trades: DEFAULT_STATE.trades,
@@ -1797,6 +1869,7 @@ async function loadOrCreateTraderData(){
 
 function hydrateState(row){
   state.rules = Object.assign({}, DEFAULT_STATE.rules, row.rules || {});
+  state.propFirm = Object.assign({}, DEFAULT_STATE.propFirm, row.prop_firm || {});
   state.session = row.session || DEFAULT_STATE.session;
   state.psychology = Object.assign({}, DEFAULT_STATE.psychology, row.psychology || {});
   if(!Array.isArray(state.psychology.strategies)) state.psychology.strategies = [];
@@ -1823,6 +1896,7 @@ async function saveState(){
   if(!currentUser) return;
   const { error } = await sb.from('trader_data').update({
     rules: state.rules,
+    prop_firm: state.propFirm,
     session: state.session,
     psychology: state.psychology,
     trades: state.trades,
@@ -1953,6 +2027,7 @@ document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
     if(btn.dataset.view==='analytics') { renderDashChart(); renderLeaderboards(); renderEquityChart('equityChart','equityTotal','equitySub'); renderConfluence(); }
     if(btn.dataset.view==='journal') renderJournal();
     if(btn.dataset.view==='orders') renderOrders();
+    if(btn.dataset.view==='propfirm') { renderPropFirmForm(); renderPropFirmCompliance(); }
     toggleSidebar(false);
     window.scrollTo({top:0, behavior:'smooth'});
   });
@@ -2061,7 +2136,7 @@ function animateCount(el, from, to, isMoney, decimals){
 /* ============ RENDER ============ */
 function renderAll(){
   renderTraderFilterOptions();
-  renderDashboard(); renderRulesForm(); renderSessionForm(); renderPsychologyForm(); renderJournal(); updateSessionPill();
+  renderDashboard(); renderRulesForm(); renderPropFirmForm(); renderPropFirmCompliance(); renderSessionForm(); renderPsychologyForm(); renderJournal(); updateSessionPill();
   renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges(); renderDisciplineScore();
   renderEquityChart('equityChartOverview','equityTotalOverview','equitySubOverview');
   renderEquityChart('equityChart','equityTotal','equitySub');
@@ -2140,6 +2215,186 @@ async function saveRules(){
   await saveState(); renderDashboard(); renderGauges();
   showToast('Rules saved');
 }
+
+/* ============ PROP FIRM COMPLIANCE ============ */
+function setPfPhase(phase){
+  state.propFirm.phase = phase;
+  document.querySelectorAll('#pfPhaseRow .pf-phase-chip').forEach(c=>c.classList.toggle('active', c.dataset.phase===phase));
+}
+function renderPropFirmForm(){
+  const pf = state.propFirm;
+  document.getElementById('pf_firmName').value = pf.firmName || '';
+  document.getElementById('pf_startingBalance').value = pf.startingBalance ?? '';
+  document.getElementById('pf_profitTarget').value = pf.profitTarget ?? '';
+  document.getElementById('pf_maxDailyLossPct').value = pf.maxDailyLossPct ?? '';
+  document.getElementById('pf_maxOverallDrawdownPct').value = pf.maxOverallDrawdownPct ?? '';
+  document.getElementById('pf_drawdownType').value = pf.drawdownType || 'static';
+  document.getElementById('pf_minTradingDays').value = pf.minTradingDays ?? '';
+  document.getElementById('pf_consistencyRulePct').value = pf.consistencyRulePct ?? '';
+  setPfPhase(pf.phase || 'challenge');
+}
+async function savePropFirm(){
+  state.propFirm = {
+    firmName: document.getElementById('pf_firmName').value.trim(),
+    phase: state.propFirm.phase || 'challenge',
+    startingBalance: numOrNullFrom('pf_startingBalance'),
+    profitTarget: numOrNullFrom('pf_profitTarget'),
+    maxDailyLossPct: numOrNullFrom('pf_maxDailyLossPct'),
+    maxOverallDrawdownPct: numOrNullFrom('pf_maxOverallDrawdownPct'),
+    drawdownType: document.getElementById('pf_drawdownType').value,
+    minTradingDays: numOrNullFrom('pf_minTradingDays'),
+    consistencyRulePct: numOrNullFrom('pf_consistencyRulePct'),
+  };
+  await saveState();
+  document.getElementById('pfSavedHint').textContent = 'Saved just now.';
+  renderPropFirmCompliance();
+  showToast('Prop firm rules saved');
+}
+
+// Pulls every trade into per-day P/L buckets, sorted chronologically.
+function pfDailyPnlSeries(){
+  const byDay = {};
+  filteredTrades().forEach(t=>{ byDay[t.date] = (byDay[t.date]||0) + pnlOf(t); });
+  return Object.keys(byDay).sort().map(date=>({date, pnl: byDay[date]}));
+}
+
+function computePropFirmMetrics(){
+  const pf = state.propFirm;
+  const start = pf.startingBalance;
+  if(!start) return null;
+
+  const series = pfDailyPnlSeries();
+  let balance = start;
+  let peak = start;
+  let maxDrawdownHit = 0; // largest $ drawdown observed at any point, from the relevant reference (peak or start)
+
+  series.forEach(d=>{
+    balance += d.pnl;
+    if(balance > peak) peak = balance;
+    const reference = pf.drawdownType==='trailing' ? peak : start;
+    const dd = reference - balance;
+    if(dd > maxDrawdownHit) maxDrawdownHit = dd;
+  });
+
+  const currentBalance = balance;
+  const totalProfit = currentBalance - start;
+  const profitTargetDollar = pf.profitTarget ? start * pf.profitTarget/100 : null;
+  const maxOverallDrawdownDollar = pf.maxOverallDrawdownPct ? start * pf.maxOverallDrawdownPct/100 : null;
+
+  const todayIso = todayStr();
+  const todayPnl = series.find(d=>d.date===todayIso)?.pnl || 0;
+  const todayLoss = todayPnl < 0 ? Math.abs(todayPnl) : 0;
+  const maxDailyLossDollar = pf.maxDailyLossPct ? start * pf.maxDailyLossPct/100 : null;
+
+  const tradingDays = series.filter(d=>d.pnl !== 0 || true).length; // any day with at least one logged trade
+  const minTradingDays = pf.minTradingDays;
+
+  let consistencyBreach = false;
+  let consistencyPct = 0;
+  if(pf.consistencyRulePct && totalProfit > 0){
+    const bestDay = Math.max(0, ...series.map(d=>d.pnl));
+    consistencyPct = (bestDay / totalProfit) * 100;
+    consistencyBreach = consistencyPct > pf.consistencyRulePct;
+  }
+
+  const overallDrawdownBreached = maxOverallDrawdownDollar!=null && maxDrawdownHit >= maxOverallDrawdownDollar;
+  const dailyLossBreached = maxDailyLossDollar!=null && todayLoss >= maxDailyLossDollar;
+  const profitTargetHit = profitTargetDollar!=null && totalProfit >= profitTargetDollar;
+  const tradingDaysMet = minTradingDays!=null ? tradingDays >= minTradingDays : true;
+
+  let overallStatus = 'pass';
+  if(overallDrawdownBreached || dailyLossBreached || consistencyBreach) overallStatus = 'fail';
+  else if(maxOverallDrawdownDollar!=null && maxDrawdownHit >= maxOverallDrawdownDollar*0.7) overallStatus = 'warn';
+  else if(maxDailyLossDollar!=null && todayLoss >= maxDailyLossDollar*0.7) overallStatus = 'warn';
+
+  return {
+    start, currentBalance, totalProfit, peak,
+    profitTargetDollar, profitTargetHit,
+    maxOverallDrawdownDollar, maxDrawdownHit, overallDrawdownBreached,
+    todayLoss, maxDailyLossDollar, dailyLossBreached,
+    tradingDays, minTradingDays, tradingDaysMet,
+    consistencyPct, consistencyBreach,
+    overallStatus
+  };
+}
+
+function pfBar(pct, tone){
+  const clamped = Math.max(0, Math.min(100, pct));
+  return `<div class="pf-track"><div class="pf-fill ${tone||''}" style="width:${clamped}%"></div></div>`;
+}
+
+function renderPropFirmCompliance(){
+  const wrap = document.getElementById('pfComplianceWrap');
+  const headerBadge = document.getElementById('pfHeaderBadge');
+  if(!wrap || !headerBadge) return;
+
+  const pf = state.propFirm;
+  const m = computePropFirmMetrics();
+
+  if(!m){
+    headerBadge.className = 'pf-badge off';
+    headerBadge.textContent = 'Not configured';
+    wrap.innerHTML = `<div class="card tilt"><div class="pf-empty">Set a starting balance above to activate live compliance tracking.</div></div>`;
+    return;
+  }
+
+  headerBadge.className = 'pf-badge ' + m.overallStatus;
+  headerBadge.textContent = m.overallStatus==='pass' ? 'On Track' : (m.overallStatus==='warn' ? 'At Risk' : 'Rule Breached');
+
+  const fmt = n => (n<0?'-':'') + '$' + Math.abs(n).toFixed(0);
+
+  const profitPct = m.profitTargetDollar ? (m.totalProfit / m.profitTargetDollar * 100) : 0;
+  const ddPct = m.maxOverallDrawdownDollar ? (m.maxDrawdownHit / m.maxOverallDrawdownDollar * 100) : 0;
+  const dailyPct = m.maxDailyLossDollar ? (m.todayLoss / m.maxDailyLossDollar * 100) : 0;
+  const daysPct = m.minTradingDays ? (m.tradingDays / m.minTradingDays * 100) : 0;
+
+  wrap.innerHTML = `
+    <div class="card tilt">
+      <h2>Live <span class="accent">Compliance</span><span class="eyebrow">${escapeHtml(pf.firmName||'your firm')} · ${pf.phase}</span></h2>
+
+      <div class="pf-metric">
+        <div class="pf-metric-head">
+          <div><div class="pf-metric-title">Profit Target</div><div class="pf-metric-sub">${fmt(m.totalProfit)} of ${m.profitTargetDollar!=null?fmt(m.profitTargetDollar):'—'}</div></div>
+          <div class="pf-badge ${m.profitTargetHit?'pass':'off'}">${m.profitTargetHit?'Hit':profitPct.toFixed(0)+'%'}</div>
+        </div>
+        ${pfBar(profitPct, '')}
+      </div>
+
+      <div class="pf-metric">
+        <div class="pf-metric-head">
+          <div><div class="pf-metric-title">Overall Drawdown</div><div class="pf-metric-sub">${fmt(m.maxDrawdownHit)} used of ${m.maxOverallDrawdownDollar!=null?fmt(m.maxOverallDrawdownDollar):'—'} (${pf.drawdownType})</div></div>
+          <div class="pf-badge ${m.overallDrawdownBreached?'fail':(ddPct>=70?'warn':'pass')}">${m.overallDrawdownBreached?'Breached':ddPct.toFixed(0)+'%'}</div>
+        </div>
+        ${pfBar(ddPct, m.overallDrawdownBreached?'fail':(ddPct>=70?'warn':''))}
+      </div>
+
+      <div class="pf-metric">
+        <div class="pf-metric-head">
+          <div><div class="pf-metric-title">Daily Loss Limit</div><div class="pf-metric-sub">${fmt(-m.todayLoss)} today of ${m.maxDailyLossDollar!=null?fmt(m.maxDailyLossDollar):'—'} allowed</div></div>
+          <div class="pf-badge ${m.dailyLossBreached?'fail':(dailyPct>=70?'warn':'pass')}">${m.dailyLossBreached?'Breached':dailyPct.toFixed(0)+'%'}</div>
+        </div>
+        ${pfBar(dailyPct, m.dailyLossBreached?'fail':(dailyPct>=70?'warn':''))}
+      </div>
+
+      <div class="pf-metric">
+        <div class="pf-metric-head">
+          <div><div class="pf-metric-title">Minimum Trading Days</div><div class="pf-metric-sub">${m.tradingDays} of ${m.minTradingDays ?? '—'} days logged</div></div>
+          <div class="pf-badge ${m.tradingDaysMet?'pass':'off'}">${m.tradingDaysMet?'Met':daysPct.toFixed(0)+'%'}</div>
+        </div>
+        ${pfBar(daysPct, '')}
+      </div>
+
+      <div class="pf-metric" style="margin-bottom:0;">
+        <div class="pf-metric-head">
+          <div><div class="pf-metric-title">Consistency Rule</div><div class="pf-metric-sub">Best single day is ${m.consistencyPct.toFixed(0)}% of total profit${pf.consistencyRulePct?` (limit ${pf.consistencyRulePct}%)`:''}</div></div>
+          <div class="pf-badge ${pf.consistencyRulePct ? (m.consistencyBreach?'fail':'pass') : 'off'}">${pf.consistencyRulePct ? (m.consistencyBreach?'Breached':'OK') : 'No limit set'}</div>
+        </div>
+        ${pf.consistencyRulePct ? pfBar(m.consistencyPct, m.consistencyBreach?'fail':'') : ''}
+      </div>
+    </div>
+  `;
+}
+
 function renderSessionForm(){
   document.getElementById('s_start').value = state.session.start;
   document.getElementById('s_end').value = state.session.end;
