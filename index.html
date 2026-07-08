@@ -10,6 +10,7 @@
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="shortcut icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
+<link rel="manifest" href="manifest.json">
 <meta property="og:title" content="Ghost Discipline — GMC Traders">
 <meta property="og:description" content="A private terminal for traders who keep their word.">
 <meta property="og:image" content="logo.png">
@@ -973,6 +974,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-9.5-8.8C1 8.5 3 5 6.5 5c2 0 3.3 1.1 5.5 3 2.2-1.9 3.5-3 5.5-3C21 5 23 8.5 21.5 12.2 19 16.65 12 21 12 21z"/></svg>
         Psychology
       </button>
+      <button class="side-navbtn" id="getAppBtn" onclick="handleGetApp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M9 18h6"/><path d="M12 6v6l3 2"/></svg>
+        Get App
+      </button>
     </nav>
     <div class="side-foot">
       <div class="side-session">
@@ -1910,7 +1915,7 @@ function numOrNullFrom(id){
 }
 
 /* ============ NAV (left sidebar) ============ */
-document.querySelectorAll('.side-navbtn').forEach(btn=>{
+document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.side-navbtn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -3246,6 +3251,34 @@ function showCalDay(iso){
     </div>`;
 }
 
+/* ============ GET APP (platform-aware) ============ */
+function handleGetApp(){
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isAndroid = /Android/i.test(ua);
+  if(isIOS){
+    document.getElementById('getAppOverlay').classList.add('show');
+    toggleSidebar(false);
+  } else if(isAndroid){
+    const a = document.createElement('a');
+    a.href = 'ghost-discipline.apk';
+    a.download = 'ghost-discipline.apk';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Downloading Ghost Discipline APK…');
+    toggleSidebar(false);
+  } else {
+    window.open('ghost-discipline.apk', '_blank');
+    toggleSidebar(false);
+  }
+}
+
+/* ============ PWA SERVICE WORKER ============ */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
 /* ============ BOOT ============ */
 (async function boot(){
   const hashParams = getHashParams();
@@ -3260,5 +3293,20 @@ function showCalDay(iso){
   }
 })();
 </script>
+<!-- GET APP MODAL (iOS instructions) -->
+<div class="overlay" id="getAppOverlay">
+  <div class="modal">
+    <h3>Add Ghost Discipline to Home Screen</h3>
+    <div class="sub">iOS doesn't allow app installs from outside the App Store — here's the equivalent.</div>
+    <div class="check-item pass"><span>1</span> Tap the <b>Share</b> icon in Safari's toolbar (square with an arrow pointing up).</div>
+    <div class="check-item pass"><span>2</span> Scroll down and tap <b>Add to Home Screen</b>.</div>
+    <div class="check-item pass"><span>3</span> Tap <b>Add</b> in the top right.</div>
+    <div class="ok-banner">That's it — Ghost Discipline now opens full-screen from your home screen like a native app, and stays up to date automatically since it loads the live site.</div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="side-logout" style="width:100%;" onclick="document.getElementById('getAppOverlay').classList.remove('show')">Got it</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
