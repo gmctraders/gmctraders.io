@@ -2182,10 +2182,13 @@ function computePeriodStats(startIso, endIso){
     pnl, avgRR, bestDay, worstDay, ruleBrokenDays, activeDays: histInRange.length, avgDiscipline, moodRows };
 }
 
+let periodReviewQueue = [];
+
 function maybeShowPeriodicReview(){
   const now = new Date();
   const seen = state.psychology.reviewsSeen;
-  let dirty = false, monthlyToShow = null, weeklyToShow = null;
+  let dirty = false;
+  periodReviewQueue = [];
 
   const thisMonthKey = monthKeyFor(now);
   if(now.getDate() <= 5 && seen.monthly !== thisMonthKey){
@@ -2193,8 +2196,11 @@ function maybeShowPeriodicReview(){
     const start = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), 1);
     const end = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth()+1, 0);
     const data = computePeriodStats(toIso(start), toIso(end));
-    seen.monthly = thisMonthKey; dirty = true;
-    if(data.tradeCount>0) monthlyToShow = { label: monthLabel(prevMonthDate), data };
+    if(data.tradeCount>0){
+      periodReviewQueue.push({ kind:'monthly', label: monthLabel(prevMonthDate), data, markKey:'monthly', markVal:thisMonthKey });
+    } else {
+      seen.monthly = thisMonthKey; dirty = true; // nothing to show — don't keep re-checking an empty month
+    }
   }
 
   const thisWeekKey = weekKeyFor(now);
@@ -2204,14 +2210,25 @@ function maybeShowPeriodicReview(){
     const prevMonday = new Date(thisMonday); prevMonday.setDate(prevMonday.getDate()-7);
     const prevSunday = new Date(thisMonday); prevSunday.setDate(prevSunday.getDate()-1);
     const data = computePeriodStats(toIso(prevMonday), toIso(prevSunday));
-    seen.weekly = thisWeekKey; dirty = true;
-    if(data.tradeCount>0) weeklyToShow = { label: `Week of ${toIso(prevMonday)} – ${toIso(prevSunday)}`, data };
+    if(data.tradeCount>0){
+      periodReviewQueue.push({ kind:'weekly', label: `Week of ${toIso(prevMonday)} – ${toIso(prevSunday)}`, data, markKey:'weekly', markVal:thisWeekKey });
+    } else {
+      seen.weekly = thisWeekKey; dirty = true;
+    }
   }
 
   if(dirty) saveState();
-  // Only one popup per app open — monthly wins if both are due, since it's rarer and more comprehensive.
-  if(monthlyToShow) showPeriodReview('monthly', monthlyToShow.label, monthlyToShow.data);
-  else if(weeklyToShow) showPeriodReview('weekly', weeklyToShow.label, weeklyToShow.data);
+  showNextPeriodReview();
+}
+
+function showNextPeriodReview(){
+  if(periodReviewQueue.length===0) return;
+  const next = periodReviewQueue.shift();
+  // Only mark a period "seen" at the moment it's actually queued to display —
+  // guarantees it won't be silently skipped if shown alongside another review.
+  state.psychology.reviewsSeen[next.markKey] = next.markVal;
+  saveState();
+  showPeriodReview(next.kind, next.label, next.data);
 }
 
 function showPeriodReview(kind, label, data){
@@ -2248,6 +2265,7 @@ function showPeriodReview(kind, label, data){
 }
 function closePeriodReview(){
   document.getElementById('periodReviewOverlay').classList.remove('show');
+  if(periodReviewQueue.length>0) setTimeout(showNextPeriodReview, 350);
 }
 
 /* ============ RISK % HELPERS ============ */
