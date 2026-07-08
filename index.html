@@ -1512,6 +1512,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         </div>
       </div>
       <div class="card tilt">
+        <h2>Emotional <span class="accent">Check-Ins</span><span class="eyebrow">last 7 days, before every trade</span></h2>
+        <div class="stat-row" id="checkinStatRow"></div>
+      </div>
+      <div class="card tilt">
         <h2>Why Are You <span class="accent">Trading?</span></h2>
         <div class="field"><textarea id="p_why" placeholder="e.g. To build long-term financial independence through patient, rule-based execution."></textarea></div>
         <h2 style="margin-top:24px">Monk <span class="accent">Code</span></h2>
@@ -1556,9 +1560,23 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
   <div class="modal">
     <h3>Pre-Trade Check</h3>
     <div class="sub">Confirm you're still inside your rules before you act.</div>
-    <div id="checkList"></div>
-    <div id="violationArea"></div>
-    <div class="btn-row" id="pretradeActions"></div>
+    <div id="pretradeMoodStep">
+      <div style="color:var(--platinum);font-size:13px;font-weight:600;margin-bottom:10px;">How do you feel right now?</div>
+      <div class="mood-grid" id="pretradeMoodChoices">
+        <div class="mood-chip" data-mood="calm" onclick="selectPretradeMood('calm')">😌 Calm</div>
+        <div class="mood-chip" data-mood="confident" onclick="selectPretradeMood('confident')">💪 Confident</div>
+        <div class="mood-chip" data-mood="fomo" onclick="selectPretradeMood('fomo')">😬 FOMO</div>
+        <div class="mood-chip" data-mood="revenge" onclick="selectPretradeMood('revenge')">😡 Revenge</div>
+        <div class="mood-chip" data-mood="bored" onclick="selectPretradeMood('bored')">🥱 Bored</div>
+        <div class="mood-chip" data-mood="anxious" onclick="selectPretradeMood('anxious')">😰 Anxious</div>
+      </div>
+    </div>
+    <div id="pretradeChecksStep" style="display:none;">
+      <div id="checkList"></div>
+      <div id="violationArea"></div>
+      <div id="pretradeConfirmArea"></div>
+      <div class="btn-row" id="pretradeActions"></div>
+    </div>
   </div>
 </div>
 
@@ -1627,7 +1645,7 @@ const DEFAULT_STATE = {
   rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null },
   propFirm:{ firmName:'', phase:'challenge', startingBalance:null, profitTarget:null, maxDailyLossPct:null, maxOverallDrawdownPct:null, drawdownType:'static', minTradingDays:null, consistencyRulePct:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
-  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null },
+  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null, preTradeCheckins:[] },
   trades:[],
   streak:{ count:0, lastGoodDate:null },
   day:{ date:null, tradesCount:0, lossUsed:0, ruleBrokenToday:false },
@@ -1876,6 +1894,7 @@ function hydrateState(row){
   if(!Array.isArray(state.psychology.traders)) state.psychology.traders = [];
   if(!Array.isArray(state.psychology.orders)) state.psychology.orders = [];
   if(!Array.isArray(state.psychology.disciplineHistory)) state.psychology.disciplineHistory = [];
+  if(!Array.isArray(state.psychology.preTradeCheckins)) state.psychology.preTradeCheckins = [];
   state.psychology.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
   if(state.psychology.strategies.length===0){
     state.psychology.strategies.push({
@@ -2413,6 +2432,26 @@ async function saveSession(){
 function renderPsychologyForm(){
   document.getElementById('p_why').value = state.psychology.why || '';
   document.getElementById('p_monk').value = state.psychology.monk || '';
+  renderCheckinStats();
+}
+function renderCheckinStats(){
+  const el = document.getElementById('checkinStatRow');
+  if(!el) return;
+  const cutoff = Date.now() - 7*24*60*60*1000;
+  const recent = (state.psychology.preTradeCheckins||[]).filter(c=>{
+    const t = new Date(c.date+'T'+ (c.time?.replace(/\s?[AP]M/i,'')||'00:00')).getTime();
+    return !isNaN(t) ? t >= cutoff : true;
+  });
+  const risky = recent.filter(c=>RISKY_MOODS.includes(c.mood));
+  const caught = risky.filter(c=>!c.overridden).length;
+  const overridden = risky.filter(c=>c.overridden).length;
+  const calmCount = recent.filter(c=>!RISKY_MOODS.includes(c.mood)).length;
+  el.innerHTML = `
+    <div class="stat"><b>${recent.length}</b><span>Check-ins</span></div>
+    <div class="stat ${caught>0?'good':''}"><b>${caught}</b><span>Delayed after flag</span></div>
+    <div class="stat ${overridden>0?'bad':''}"><b>${overridden}</b><span>Traded anyway</span></div>
+    <div class="stat"><b>${calmCount}</b><span>Entered calm</span></div>
+  `;
 }
 async function savePsychology(){
   state.psychology.why = document.getElementById('p_why').value;
@@ -3232,9 +3271,34 @@ function updateSessionPill(){
 setInterval(()=>{ updateSessionPill(); if(currentUser && state.rules.coolingOffMinutes!=null) renderGauges(); }, 1000);
 
 /* ============ PRE-TRADE CHECK ============ */
+const RISKY_MOODS = ['fomo','revenge','anxious'];
+let pretradeMood = null;
+let pretradeViolatedCache = false;
+
 function openPretrade(){
   rolloverDayIfNeeded();
+  pretradeMood = null;
+  document.querySelectorAll('#pretradeMoodChoices .mood-chip').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('pretradeMoodStep').style.display = 'block';
+  document.getElementById('pretradeChecksStep').style.display = 'none';
+  document.getElementById('pretradeOverlay').classList.add('show');
+}
+
+function selectPretradeMood(mood){
+  pretradeMood = mood;
+  document.querySelectorAll('#pretradeMoodChoices .mood-chip').forEach(c=>c.classList.toggle('selected', c.dataset.mood===mood));
+  setTimeout(runPretradeChecks, 180); // brief pause so the choice registers before checks appear
+}
+
+function runPretradeChecks(){
   const checks = []; let violated = false;
+  const riskyMood = RISKY_MOODS.includes(pretradeMood);
+
+  checks.push({label: riskyMood
+    ? `Emotional state: ${MOOD_LABELS[pretradeMood]} — high-risk state for entries`
+    : `Emotional state: ${MOOD_LABELS[pretradeMood]}`, fail: riskyMood});
+  if(riskyMood) violated = true;
+
   if(state.rules.maxTrades!=null){
     const fail = state.day.tradesCount >= state.rules.maxTrades;
     if(fail) violated = true;
@@ -3260,24 +3324,65 @@ function openPretrade(){
     if(fail) violated = true;
     checks.push({label: fail ? `Cooling-off period (${cooldownMinutesRemaining()} min remaining)` : `Cooling-off period observed`, fail});
   }
+
+  document.getElementById('pretradeMoodStep').style.display = 'none';
+  document.getElementById('pretradeChecksStep').style.display = 'block';
   document.getElementById('checkList').innerHTML = checks.map(c=>`
     <div class="check-item ${c.fail?'fail':'pass'}"><span>${c.fail?'✕':'✓'}</span><span>${c.label}</span></div>`).join('');
 
   const violationArea = document.getElementById('violationArea');
+  const confirmArea = document.getElementById('pretradeConfirmArea');
   const actions = document.getElementById('pretradeActions');
   pendingViolation = violated;
+  pretradeViolatedCache = violated;
+
   if(violated){
-    violationArea.innerHTML = `<div class="violation-banner">You're about to break your own rules. This is exactly the moment discipline is built or lost.</div>`;
-    actions.innerHTML = `<button class="btn btn-primary" style="flex:1" onclick="closeModal('pretradeOverlay')">Delay Decision</button>
-      <button class="btn btn-danger" style="flex:1" onclick="proceedToTrade()">Override & Proceed</button>`;
+    violationArea.innerHTML = riskyMood
+      ? `<div class="violation-banner">You flagged yourself as ${MOOD_LABELS[pretradeMood].toLowerCase()}. This is exactly the state that produces trades you regret. Slow down.</div>`
+      : `<div class="violation-banner">You're about to break your own rules. This is exactly the moment discipline is built or lost.</div>`;
+
+    if(riskyMood){
+      confirmArea.innerHTML = `<div class="field" style="margin-top:2px;">
+        <label style="text-transform:none;font-size:12px;">Type "I am not trading to fix a feeling" to unlock Override</label>
+        <input type="text" id="pretradeConfirmInput" oninput="checkPretradeConfirmText()" placeholder="Type the phrase exactly" autocomplete="off">
+      </div>`;
+    } else {
+      confirmArea.innerHTML = '';
+    }
+
+    actions.innerHTML = `<button class="btn btn-primary" style="flex:1" onclick="delayPretrade()">Delay Decision</button>
+      <button class="btn btn-danger" style="flex:1" id="pretradeOverrideBtn" ${riskyMood?'disabled':''} onclick="proceedToTrade()">Override & Proceed</button>`;
   } else {
+    confirmArea.innerHTML = '';
     violationArea.innerHTML = `<div class="ok-banner">You're within your rules. Stay disciplined and execute your plan.</div>`;
-    actions.innerHTML = `<button class="btn btn-ghost" style="flex:1" onclick="closeModal('pretradeOverlay')">Cancel</button>
+    actions.innerHTML = `<button class="btn btn-ghost" style="flex:1" onclick="delayPretrade(true)">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="proceedToTrade()">Stay Disciplined — Continue</button>`;
   }
-  document.getElementById('pretradeOverlay').classList.add('show');
 }
+
+function checkPretradeConfirmText(){
+  const input = document.getElementById('pretradeConfirmInput');
+  const btn = document.getElementById('pretradeOverrideBtn');
+  if(!input || !btn) return;
+  const match = input.value.trim().toLowerCase() === "i am not trading to fix a feeling";
+  btn.disabled = !match;
+}
+
+function logPretradeCheckin(overridden){
+  const hist = state.psychology.preTradeCheckins;
+  hist.push({ date: todayStr(), time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), mood: pretradeMood, violated: pretradeViolatedCache, overridden: !!overridden });
+  if(hist.length>500) hist.splice(0, hist.length-500);
+}
+
+function delayPretrade(clean){
+  logPretradeCheckin(false);
+  closeModal('pretradeOverlay');
+  if(!clean) showToast('Good call — delaying beats a trade you regret.');
+  saveState();
+}
+
 function proceedToTrade(){
+  logPretradeCheckin(pretradeViolatedCache);
   closeModal('pretradeOverlay');
   closingOrderId = null;
   document.getElementById('t_rr').value='';
@@ -3285,7 +3390,7 @@ function proceedToTrade(){
   document.getElementById('t_winAmount').value=''; document.getElementById('t_winAmount').dataset.touched='';
   document.getElementById('t_notes').value='';
   document.getElementById('t_result').value='win'; onResultChange();
-  resetMoodChoices(null);
+  resetMoodChoices(pretradeMood);
   populateTradeSelectors();
   updateTradeRiskPreview();
   onStrategyChange();
