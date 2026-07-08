@@ -434,6 +434,11 @@ a{color:var(--bronze-bright);}
   background:linear-gradient(135deg, var(--bronze-bright), var(--bronze));
   box-shadow:0 4px 14px rgba(16,185,129,0.35);
 }
+.badge-pip.earned.gold{
+  border-color:var(--gold-dim);color:var(--gold-ink);
+  background:linear-gradient(135deg, var(--gold-bright), var(--gold));
+  box-shadow:0 4px 16px rgba(212,175,55,0.45);
+}
 .badge-pip:hover{transform:translateY(-2px);}
 .badge-pip .tip{
   position:absolute;bottom:44px;left:50%;transform:translateX(-50%);background:var(--panel-solid);
@@ -2066,6 +2071,8 @@ function renderAll(){
 function renderDashboard(){
   const prevStreak = parseInt(document.getElementById('streakNum').textContent)||0;
   document.getElementById('streakNum').textContent = state.streak.count;
+  document.getElementById('streakNum').style.textShadow = state.streak.count >= 30
+    ? '0 0 26px rgba(212,175,55,0.45)' : '0 0 26px rgba(16,185,129,0.14)';
   document.getElementById('medLetter').textContent = state.streak.count;
   document.getElementById('medFront').classList.toggle('broken', state.day.ruleBrokenToday);
   document.getElementById('medSmall').classList.toggle('broken', state.day.ruleBrokenToday);
@@ -2078,7 +2085,8 @@ function renderDashboard(){
   const badgeStrip = document.getElementById('badgeStrip');
   badgeStrip.innerHTML = STREAK_MILESTONES.map(m=>{
     const earned = state.streak.count >= m;
-    return `<div class="badge-pip ${earned?'earned':''}">${m}<span class="tip">${m}-day streak${earned?' — earned':''}</span></div>`;
+    const gold = m >= 30;
+    return `<div class="badge-pip ${earned?'earned':''} ${earned&&gold?'gold':''}">${m}<span class="tip">${m}-day streak${earned?' — earned':''}</span></div>`;
   }).join('');
 
   const maxT = state.rules.maxTrades;
