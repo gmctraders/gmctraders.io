@@ -311,6 +311,12 @@ a{color:var(--bronze-bright);}
 .side-logout:hover{border-color:var(--loss);color:var(--loss-bright);}
 
 .dot{width:6px;height:6px;border-radius:50%;background:var(--slate);flex-shrink:0;}
+.dot.sync-ok{background:var(--win);box-shadow:0 0 6px rgba(34,197,94,0.6);}
+.dot.sync-saving{background:var(--amber);box-shadow:0 0 6px rgba(245,166,35,0.6);animation:pulse 1s ease-in-out infinite;}
+.dot.sync-offline{background:var(--loss-bright);box-shadow:0 0 6px rgba(244,63,94,0.6);}
+.dot.sync-conflict{background:var(--amber);box-shadow:0 0 8px rgba(245,166,35,0.8);animation:pulse 0.7s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+#syncStatus{opacity:0.85;}
 .dot.live{background:var(--win);box-shadow:0 0 8px var(--win);}
 .dot.closed{background:var(--loss);box-shadow:0 0 8px var(--loss);}
 
@@ -598,6 +604,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .check-item.fail span:first-child{background:rgba(244,63,94,0.15);color:var(--loss);}
 .violation-banner{background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:12px;
   padding:13px 15px;margin-top:16px;font-size:12.5px;color:#ffc2ca;line-height:1.55;}
+.review-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+.review-stat{background:rgba(255,255,255,0.03);border:1px solid var(--steel);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
+.review-stat-label{font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;}
+.review-stat-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--platinum);}
+.review-block{margin-bottom:14px;}
 .ok-banner{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:12px;
   padding:13px 15px;margin-top:16px;font-size:12.5px;color:#a7f3d0;line-height:1.55;}
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -1035,6 +1046,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <div class="side-session">
         <span class="dot" id="sessionDot"></span>
         <span id="sessionPillText">Loading session…</span>
+      </div>
+      <div class="side-session" id="syncStatus" onclick="reopenSyncConflictIfAny()" style="cursor:pointer;">
+        <span class="dot sync-ok" id="syncDot"></span>
+        <span id="syncLabel">All changes saved</span>
       </div>
       <button class="side-logout" onclick="handleLogout()">Sign Out</button>
     </div>
@@ -1645,7 +1660,7 @@ const DEFAULT_STATE = {
   rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null },
   propFirm:{ firmName:'', phase:'challenge', startingBalance:null, profitTarget:null, maxDailyLossPct:null, maxOverallDrawdownPct:null, drawdownType:'static', minTradingDays:null, consistencyRulePct:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
-  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null, preTradeCheckins:[] },
+  psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null, preTradeCheckins:[], reviewsSeen:{ weekly:null, monthly:null } },
   trades:[],
   streak:{ count:0, lastGoodDate:null },
   day:{ date:null, tradesCount:0, lossUsed:0, ruleBrokenToday:false },
@@ -1842,6 +1857,10 @@ async function handleLogout(){
   await sb.auth.signOut();
   currentUser = null;
   state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  conflictPending = null;
+  dataVersion = 1;
+  if(saveRetryTimer){ clearTimeout(saveRetryTimer); saveRetryTimer = null; }
+  document.getElementById('syncConflictOverlay')?.classList.remove('show');
   document.getElementById('appShell').classList.remove('show');
   document.getElementById('gateScreen').classList.remove('show');
   document.getElementById('authScreen').style.display = 'flex';
@@ -1850,6 +1869,7 @@ async function handleLogout(){
 async function onAuthed(user){
   currentUser = user;
   document.getElementById('authScreen').style.display = 'none';
+  await flushPendingSave(); // push any offline-queued changes from a prior session first
   await loadOrCreateTraderData();
   rolloverDayIfNeeded();
   if(!state.rulesCompleted){
@@ -1858,6 +1878,7 @@ async function onAuthed(user){
     document.getElementById('gateScreen').classList.remove('show');
     document.getElementById('appShell').classList.add('show');
     renderAll();
+    maybeShowPeriodicReview();
   }
 }
 
@@ -1876,7 +1897,8 @@ async function loadOrCreateTraderData(){
       streak: DEFAULT_STATE.streak,
       day: DEFAULT_STATE.day,
       consecutive_losses: 0,
-      rules_completed: false
+      rules_completed: false,
+      version: 1
     }).select().single();
     if(insertErr){ showToast('Could not create your profile'); return; }
     hydrateState(created);
@@ -1895,6 +1917,7 @@ function hydrateState(row){
   if(!Array.isArray(state.psychology.orders)) state.psychology.orders = [];
   if(!Array.isArray(state.psychology.disciplineHistory)) state.psychology.disciplineHistory = [];
   if(!Array.isArray(state.psychology.preTradeCheckins)) state.psychology.preTradeCheckins = [];
+  state.psychology.reviewsSeen = Object.assign({ weekly:null, monthly:null }, state.psychology.reviewsSeen || {});
   state.psychology.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
   if(state.psychology.strategies.length===0){
     state.psychology.strategies.push({
@@ -1909,11 +1932,24 @@ function hydrateState(row){
   state.day = row.day || DEFAULT_STATE.day;
   state.consecutiveLosses = row.consecutive_losses || 0;
   state.rulesCompleted = !!row.rules_completed;
+  dataVersion = typeof row.version === 'number' ? row.version : 1;
 }
 
-async function saveState(){
-  if(!currentUser) return;
-  const { error } = await sb.from('trader_data').update({
+/* ============ OFFLINE SAVE QUEUE (with version-based conflict detection) ============ */
+// Every save is written to localStorage first (instant, never lost), then
+// pushed to Supabase guarded by a "version" number. If another device saved
+// in between, the version won't match, the write is rejected, and we surface
+// a conflict modal instead of silently overwriting that device's changes.
+const OFFLINE_KEY_PREFIX = 'ghostDiscipline_pendingSave_';
+let saveInFlight = false;
+let saveRetryTimer = null;
+let dataVersion = 1;
+let conflictPending = null; // holds { payload, expectedVersion } while a conflict is unresolved
+
+function offlineKey(){ return OFFLINE_KEY_PREFIX + (currentUser ? currentUser.id : 'anon'); }
+
+function buildSavePayload(){
+  return {
     rules: state.rules,
     prop_firm: state.propFirm,
     session: state.session,
@@ -1924,8 +1960,125 @@ async function saveState(){
     consecutive_losses: state.consecutiveLosses,
     rules_completed: state.rulesCompleted,
     updated_at: new Date().toISOString()
-  }).eq('user_id', currentUser.id);
-  if(error) showToast('Save failed — check connection');
+  };
+}
+function queuePendingSave(payload){
+  try{ localStorage.setItem(offlineKey(), JSON.stringify({ payload, expectedVersion: dataVersion, queuedAt: Date.now() })); }catch(e){}
+}
+function clearPendingSave(){
+  try{ localStorage.removeItem(offlineKey()); }catch(e){}
+}
+function getPendingSave(){
+  try{ const raw = localStorage.getItem(offlineKey()); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function updateSyncIndicator(status){
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if(!dot || !label) return;
+  const map = {
+    synced:   { text:'All changes saved',          cls:'sync-ok' },
+    saving:   { text:'Saving…',                    cls:'sync-saving' },
+    offline:  { text:'Offline — saved on device',  cls:'sync-offline' },
+    conflict: { text:'Sync conflict — tap to fix', cls:'sync-conflict' }
+  };
+  const m = map[status] || map.synced;
+  dot.className = 'dot ' + m.cls;
+  label.textContent = m.text;
+}
+async function saveState(){
+  if(!currentUser) return;
+  const payload = buildSavePayload();
+  queuePendingSave(payload);
+  if(conflictPending){
+    // Keep the queued changes current, but don't auto-retry over an unresolved conflict.
+    conflictPending.payload = payload;
+    updateSyncIndicator('conflict');
+    return;
+  }
+  await flushPendingSave();
+}
+async function flushPendingSave(){
+  if(!currentUser || saveInFlight) return;
+  if(conflictPending){ updateSyncIndicator('conflict'); return; }
+  const pending = getPendingSave();
+  if(!pending){ updateSyncIndicator('synced'); return; }
+  if(typeof navigator!=='undefined' && navigator.onLine===false){ updateSyncIndicator('offline'); scheduleSaveRetry(); return; }
+  saveInFlight = true;
+  updateSyncIndicator('saving');
+  try{
+    const { data, error } = await sb.from('trader_data')
+      .update(Object.assign({}, pending.payload, { version: pending.expectedVersion + 1 }))
+      .eq('user_id', currentUser.id)
+      .eq('version', pending.expectedVersion)
+      .select('version');
+    if(error) throw error;
+    if(!data || data.length===0){
+      // No row matched: someone else's save changed the version first. Don't overwrite it.
+      saveInFlight = false;
+      openSyncConflict(pending);
+      return;
+    }
+    dataVersion = data[0].version;
+    clearPendingSave();
+    updateSyncIndicator('synced');
+  }catch(e){
+    updateSyncIndicator('offline');
+    scheduleSaveRetry();
+  }
+  saveInFlight = false;
+}
+function scheduleSaveRetry(){
+  if(saveRetryTimer) return;
+  saveRetryTimer = setTimeout(()=>{ saveRetryTimer = null; flushPendingSave(); }, 15000);
+}
+window.addEventListener('online', ()=>{ showToast('Back online — syncing…'); flushPendingSave(); });
+window.addEventListener('offline', ()=>{ updateSyncIndicator('offline'); });
+
+/* ============ SYNC CONFLICT RESOLUTION ============ */
+function openSyncConflict(pending){
+  conflictPending = pending;
+  updateSyncIndicator('conflict');
+  document.getElementById('syncConflictOverlay').classList.add('show');
+}
+function reopenSyncConflictIfAny(){
+  if(conflictPending) document.getElementById('syncConflictOverlay').classList.add('show');
+}
+async function resolveConflictKeepMine(){
+  if(!conflictPending || !currentUser) return;
+  const btns = document.querySelectorAll('#syncConflictOverlay button');
+  btns.forEach(b=>b.disabled = true);
+  try{
+    const { data: row, error: fetchErr } = await sb.from('trader_data').select('version').eq('user_id', currentUser.id).maybeSingle();
+    if(fetchErr) throw fetchErr;
+    const serverVersion = (row && typeof row.version==='number') ? row.version : dataVersion;
+    const { error } = await sb.from('trader_data')
+      .update(Object.assign({}, conflictPending.payload, { version: serverVersion + 1 }))
+      .eq('user_id', currentUser.id);
+    if(error) throw error;
+    dataVersion = serverVersion + 1;
+    clearPendingSave();
+    conflictPending = null;
+    document.getElementById('syncConflictOverlay').classList.remove('show');
+    updateSyncIndicator('synced');
+    showToast('Your changes were saved over the other device\'s version.');
+  }catch(e){
+    showToast('Could not resolve conflict — check connection and try again');
+  }
+  btns.forEach(b=>b.disabled = false);
+}
+async function resolveConflictUseServer(){
+  if(!currentUser) return;
+  const btns = document.querySelectorAll('#syncConflictOverlay button');
+  btns.forEach(b=>b.disabled = true);
+  clearPendingSave();
+  conflictPending = null;
+  document.getElementById('syncConflictOverlay').classList.remove('show');
+  showToast('Loading the latest data from your other device…');
+  await loadOrCreateTraderData();
+  rolloverDayIfNeeded();
+  renderAll();
+  updateSyncIndicator('synced');
+  btns.forEach(b=>b.disabled = false);
 }
 
 function todayStr(d){ return (d||new Date()).toISOString().slice(0,10); }
@@ -1981,6 +2134,120 @@ function rolloverDayIfNeeded(){
     }
     state.day = { date:t, tradesCount:0, lossUsed:0, ruleBrokenToday:false };
   }
+}
+
+/* ============ PERIODIC REVIEW (weekly / monthly popup) ============ */
+function mondayOf(date){
+  const d = new Date(date); const day = d.getDay();
+  d.setDate(d.getDate() + (day===0 ? -6 : 1-day));
+  d.setHours(0,0,0,0);
+  return d;
+}
+function toIso(d){ return d.toISOString().slice(0,10); }
+function weekKeyFor(date){ return toIso(mondayOf(date)); }
+function monthKeyFor(date){ return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0'); }
+function monthLabel(date){ return date.toLocaleDateString(undefined,{month:'long', year:'numeric'}); }
+
+function computePeriodStats(startIso, endIso){
+  const trades = state.trades.filter(t => t.date >= startIso && t.date <= endIso);
+  const tradeCount = trades.length;
+  const wins = trades.filter(t=>t.result==='win').length;
+  const pnl = trades.reduce((s,t)=>s+pnlOf(t),0);
+  const rrVals = trades.map(t=>parseFloat(t.rr)).filter(v=>!isNaN(v));
+  const avgRR = rrVals.length ? (rrVals.reduce((a,b)=>a+b,0)/rrVals.length) : null;
+
+  const byDay = {};
+  trades.forEach(t=>{ byDay[t.date] = (byDay[t.date]||0) + pnlOf(t); });
+  let bestDay=null, worstDay=null;
+  Object.entries(byDay).forEach(([d,p])=>{
+    if(!bestDay || p>bestDay.pnl) bestDay = {date:d, pnl:p};
+    if(!worstDay || p<worstDay.pnl) worstDay = {date:d, pnl:p};
+  });
+
+  const histInRange = (state.psychology.disciplineHistory||[]).filter(h=>h.date>=startIso && h.date<=endIso);
+  const ruleBrokenDays = histInRange.filter(h=>h.ruleBroken).length;
+  const scoreVals = histInRange.map(h=>h.score).filter(v=>typeof v==='number');
+  const avgDiscipline = scoreVals.length ? Math.round(scoreVals.reduce((a,b)=>a+b,0)/scoreVals.length) : null;
+
+  const moodMap = {};
+  trades.forEach(t=>{
+    if(!t.mood) return;
+    if(!moodMap[t.mood]) moodMap[t.mood] = { trades:0, pnl:0 };
+    moodMap[t.mood].trades++; moodMap[t.mood].pnl += pnlOf(t);
+  });
+  const moodRows = Object.entries(moodMap).map(([mood,v])=>({ mood, label: MOOD_LABELS[mood]||mood, ...v }))
+    .sort((a,b)=>a.pnl-b.pnl);
+
+  return { tradeCount, wins, losses: tradeCount-wins, winRate: tradeCount ? Math.round(wins/tradeCount*100) : 0,
+    pnl, avgRR, bestDay, worstDay, ruleBrokenDays, activeDays: histInRange.length, avgDiscipline, moodRows };
+}
+
+function maybeShowPeriodicReview(){
+  const now = new Date();
+  const seen = state.psychology.reviewsSeen;
+  let dirty = false, monthlyToShow = null, weeklyToShow = null;
+
+  const thisMonthKey = monthKeyFor(now);
+  if(now.getDate() <= 5 && seen.monthly !== thisMonthKey){
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const start = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), 1);
+    const end = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth()+1, 0);
+    const data = computePeriodStats(toIso(start), toIso(end));
+    seen.monthly = thisMonthKey; dirty = true;
+    if(data.tradeCount>0) monthlyToShow = { label: monthLabel(prevMonthDate), data };
+  }
+
+  const thisWeekKey = weekKeyFor(now);
+  const dow = now.getDay();
+  if((dow===1||dow===2||dow===0) && seen.weekly !== thisWeekKey){
+    const thisMonday = mondayOf(now);
+    const prevMonday = new Date(thisMonday); prevMonday.setDate(prevMonday.getDate()-7);
+    const prevSunday = new Date(thisMonday); prevSunday.setDate(prevSunday.getDate()-1);
+    const data = computePeriodStats(toIso(prevMonday), toIso(prevSunday));
+    seen.weekly = thisWeekKey; dirty = true;
+    if(data.tradeCount>0) weeklyToShow = { label: `Week of ${toIso(prevMonday)} – ${toIso(prevSunday)}`, data };
+  }
+
+  if(dirty) saveState();
+  // Only one popup per app open — monthly wins if both are due, since it's rarer and more comprehensive.
+  if(monthlyToShow) showPeriodReview('monthly', monthlyToShow.label, monthlyToShow.data);
+  else if(weeklyToShow) showPeriodReview('weekly', weeklyToShow.label, weeklyToShow.data);
+}
+
+function showPeriodReview(kind, label, data){
+  document.getElementById('periodReviewTitle').textContent = kind==='monthly' ? 'Monthly Review' : 'Weekly Review';
+  document.getElementById('periodReviewSub').textContent = label;
+  const pnlColor = data.pnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
+  let html = `
+    <div class="review-stat-grid">
+      <div class="review-stat"><span class="review-stat-label">Net P/L</span><span class="review-stat-val" style="color:${pnlColor}">${data.pnl>=0?'+$':'-$'}${Math.abs(data.pnl).toFixed(0)}</span></div>
+      <div class="review-stat"><span class="review-stat-label">Trades</span><span class="review-stat-val">${data.tradeCount}</span></div>
+      <div class="review-stat"><span class="review-stat-label">Win Rate</span><span class="review-stat-val">${data.winRate}%</span></div>
+      <div class="review-stat"><span class="review-stat-label">Avg RR</span><span class="review-stat-val">${data.avgRR!=null?data.avgRR.toFixed(2):'—'}</span></div>
+    </div>`;
+  if(data.bestDay || data.worstDay){
+    html += `<div class="review-block">`;
+    if(data.bestDay) html += `<div class="check-item pass"><span>↑</span>Best day: ${data.bestDay.date} (${data.bestDay.pnl>=0?'+$':'-$'}${Math.abs(data.bestDay.pnl).toFixed(0)})</div>`;
+    if(data.worstDay) html += `<div class="check-item fail"><span>↓</span>Worst day: ${data.worstDay.date} (${data.worstDay.pnl>=0?'+$':'-$'}${Math.abs(data.worstDay.pnl).toFixed(0)})</div>`;
+    html += `</div>`;
+  }
+  html += `<div class="review-block">
+    <div class="check-item ${data.ruleBrokenDays>0?'fail':'pass'}"><span>${data.ruleBrokenDays>0?'✕':'✓'}</span>Rules broken on ${data.ruleBrokenDays} of ${data.activeDays||0} trading day${data.activeDays===1?'':'s'}</div>
+    ${data.avgDiscipline!=null ? `<div class="check-item ${data.avgDiscipline>=70?'pass':'fail'}"><span>${data.avgDiscipline>=70?'✓':'✕'}</span>Average discipline score: ${data.avgDiscipline}/100</div>` : ''}
+  </div>`;
+  if(data.moodRows.length){
+    const worstMood = data.moodRows[0];
+    html += `<div class="review-block">
+      <div style="font-size:12px;color:var(--slate);margin-bottom:6px;">How you traded, by emotional state</div>
+      ${data.moodRows.map(m=>`<div class="check-item ${m.pnl>=0?'pass':'fail'}"><span>${m.pnl>=0?'✓':'✕'}</span>${m.label}: ${m.trades} trade${m.trades===1?'':'s'}, ${m.pnl>=0?'+$':'-$'}${Math.abs(m.pnl).toFixed(0)}</div>`).join('')}
+      ${worstMood.pnl<0 ? `<div class="ok-banner" style="border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);margin-top:10px;">Trades logged as "${worstMood.label.replace(/^\S+\s/,'')}" cost you ${worstMood.pnl>=0?'+$':'-$'}${Math.abs(worstMood.pnl).toFixed(0)} this period. Worth watching.</div>` : ''}
+    </div>`;
+  }
+  document.getElementById('periodReviewBody').innerHTML = html;
+  document.getElementById('periodReviewOverlay').classList.add('show');
+}
+function closePeriodReview(){
+  document.getElementById('periodReviewOverlay').classList.remove('show');
 }
 
 /* ============ RISK % HELPERS ============ */
@@ -3686,6 +3953,32 @@ if('serviceWorker' in navigator){
   }
 })();
 </script>
+<!-- SYNC CONFLICT MODAL -->
+<div class="overlay" id="syncConflictOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h3>Sync Conflict</h3>
+    <div class="sub">This device has unsaved changes, but the data was also updated on another device or tab since this one last synced. Choose which version to keep.</div>
+    <div class="check-item fail"><span>✕</span>Saving here would have overwritten the other device's changes, so it was blocked.</div>
+    <div class="btn-row" style="margin-top:16px;gap:10px;display:flex;flex-direction:column;">
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="resolveConflictKeepMine()">Keep my changes from this device</button>
+      <button class="side-logout" style="width:100%;" onclick="resolveConflictUseServer()">Discard changes here, load the other device's version</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERIOD REVIEW MODAL (weekly / monthly, auto-triggered on the Overview page) -->
+<div class="overlay" id="periodReviewOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h3 id="periodReviewTitle">Weekly Review</h3>
+    <div class="sub" id="periodReviewSub"></div>
+    <div id="periodReviewBody"></div>
+    <div class="btn-row" style="margin-top:6px;gap:10px;display:flex;">
+      <button class="side-logout" style="flex:1;" onclick="closePeriodReview()">Close</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="closePeriodReview(); document.querySelector('.side-navbtn[data-view=analytics]').click();">View Analytics</button>
+    </div>
+  </div>
+</div>
+
 <!-- GET APP MODAL (iOS instructions) -->
 <div class="overlay" id="getAppOverlay">
   <div class="modal">
