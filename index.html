@@ -2112,7 +2112,6 @@ function computeDisciplineScore(){
   if(r.maxTrades) score -= Math.min(1, state.day.tradesCount / r.maxTrades) * 18;
   if(r.maxDailyLoss) score -= Math.min(1, state.day.lossUsed / r.maxDailyLoss) * 28;
   if(r.maxConsecLosses) score -= Math.min(1, state.consecutiveLosses / r.maxConsecLosses) * 18;
-  if(state.session.restrict && !isInSession()) score -= 12;
   if(isInCooldown()) score -= 12;
   if(state.day.ruleBrokenToday) score -= 40;
   return Math.max(0, Math.round(score));
