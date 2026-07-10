@@ -566,7 +566,17 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 
 /* ============ ORDER BOOK ============ */
 .trade-badge.pending{background:rgba(45,212,191,0.14);color:var(--neon-cyan);box-shadow:inset 0 0 0 1px rgba(45,212,191,0.3);}
-.order-actions{display:flex;gap:6px;flex-shrink:0;}
+.order-row{display:flex;flex-direction:column;gap:10px;padding:13px 14px;border:1px solid var(--steel);border-radius:14px;background:rgba(255,255,255,0.015);transition:border-color .15s ease;}
+.order-row:hover{border-color:var(--steel-hi);}
+.order-row-top{display:flex;align-items:center;gap:11px;}
+.order-row-top .trade-badge{width:34px;height:34px;flex-shrink:0;font-size:11px;}
+.order-row-info{flex:1;min-width:0;}
+.order-row-info .top{font-size:13px;color:var(--platinum);font-weight:600;}
+.order-row-info .bottom{font-size:11.5px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.order-cancel-btn{flex-shrink:0;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:9px;}
+.order-row .trade-tags{margin-top:0;}
+.order-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0;}
+.order-actions .btn-sm{width:100%;padding:9px 10px;font-size:12.5px;}
 .btn-win{background:transparent;border-color:var(--win);color:var(--win);}
 .btn-win:hover{background:rgba(16,185,129,0.1);}
 .btn-loss{background:transparent;border-color:var(--loss);color:var(--loss);}
@@ -3768,22 +3778,24 @@ function renderOrders(){
   list.innerHTML = orders.map(o=>{
     const typeInfo = STRATEGY_TYPES[o.strategyType];
     return `
-    <div class="trade-row">
-      <div class="trade-badge pending">${o.direction==='sell'?'SELL':'BUY'}</div>
-      <div class="trade-meta">
-        <div class="top">${o.date} ${o.time}</div>
-        <div class="bottom">${o.notes ? escapeHtml(o.notes) : 'No notes'}</div>
-        <div class="trade-tags">
-          <span class="tag-chip trader">${escapeHtml(traderName(o.trader))}</span>
-          ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
-          ${o.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(o.strategy)||'—')}</span>` : ''}
-          ${(o.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
+    <div class="order-row">
+      <div class="order-row-top">
+        <div class="trade-badge pending">${o.direction==='sell'?'SELL':'BUY'}</div>
+        <div class="order-row-info">
+          <div class="top">${o.date} · ${o.time}</div>
+          <div class="bottom">${o.notes ? escapeHtml(o.notes) : 'No notes'}</div>
         </div>
+        <button class="btn btn-sm btn-ghost order-cancel-btn" onclick="cancelOrder('${o.id}')" title="Cancel order">✕</button>
+      </div>
+      <div class="trade-tags">
+        <span class="tag-chip trader">${escapeHtml(traderName(o.trader))}</span>
+        ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
+        ${o.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(o.strategy)||'—')}</span>` : ''}
+        ${(o.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
       </div>
       <div class="order-actions">
         <button class="btn btn-sm btn-win" onclick="closeOrder('${o.id}','win')">Won</button>
         <button class="btn btn-sm btn-loss" onclick="closeOrder('${o.id}','loss')">Lost</button>
-        <button class="btn btn-sm btn-ghost" onclick="cancelOrder('${o.id}')" title="Cancel order">✕</button>
       </div>
     </div>`;
   }).join('');
