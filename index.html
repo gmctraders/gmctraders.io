@@ -276,6 +276,18 @@ a{color:var(--bronze-bright);}
   box-shadow:0 5px 0 #0e7490, 0 12px 26px rgba(45,212,191,0.22);
 }
 .btn-telegram:hover{opacity:0.94;transform:translateY(-1px);}
+.field-locked{position:relative;opacity:0.5;filter:grayscale(0.4);}
+.field-locked input, .field-locked select, .field-locked textarea{cursor:pointer !important;caret-color:transparent;}
+.field-locked::after{
+  content:'🔒';position:absolute;top:0;right:0;font-size:12px;background:rgba(212,175,55,0.14);
+  border:1px solid rgba(212,175,55,0.35);border-radius:6px;padding:2px 6px;color:var(--gold-bright);
+}
+.card-locked{position:relative;opacity:0.5;filter:grayscale(0.4);cursor:pointer;}
+.card-locked::after{
+  content:'🔒 Real accounts only';position:absolute;top:14px;right:14px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+  font-weight:700;letter-spacing:0.05em;background:rgba(212,175,55,0.14);border:1px solid rgba(212,175,55,0.35);
+  border-radius:6px;padding:3px 8px;color:var(--gold-bright);
+}
 /* ============ DEMO / TRIAL MODE ============ */
 .demo-pill{
   display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
@@ -1696,7 +1708,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="page-sub">The mind behind the mechanics.</div>
         </div>
       </div>
-      <div class="card tilt">
+      <div class="card tilt" id="psychCheckinsCard">
         <h2>Emotional <span class="accent">Check-Ins</span><span class="eyebrow">last 7 days, before every trade</span></h2>
         <div class="stat-row" id="checkinStatRow"></div>
       </div>
@@ -1704,7 +1716,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <h2>Why Are You <span class="accent">Trading?</span></h2>
         <div class="field"><textarea id="p_why" placeholder="e.g. To build long-term financial independence through patient, rule-based execution."></textarea></div>
         <h2 style="margin-top:24px">Monk <span class="accent">Code</span></h2>
-        <div class="field">
+        <div class="field" id="psychMonkField">
           <label style="text-transform:none;font-size:12px">Your personal trading principles — read them before you act on impulse.</label>
           <textarea id="p_monk" style="min-height:160px" placeholder="1. I do not chase price.&#10;2. I only enter at my defined zone."></textarea>
         </div>
@@ -2259,15 +2271,97 @@ function applyDemoLocks(){
       badge.remove();
     }
   });
+  // Get App: real accounts only.
+  const getAppBtn = document.getElementById('getAppBtn');
+  if(getAppBtn){
+    getAppBtn.classList.toggle('demo-locked', isDemoMode);
+    let gaBadge = getAppBtn.querySelector('.lock-badge');
+    if(isDemoMode){
+      if(!gaBadge){
+        gaBadge = document.createElement('span');
+        gaBadge.className = 'lock-badge';
+        gaBadge.textContent = '🔒 PRO';
+        getAppBtn.appendChild(gaBadge);
+      }
+    } else if(gaBadge){
+      gaBadge.remove();
+    }
+  }
+  // Order Book: pair / SL / TP / logic tags stay locked — reasoning goes in Notes instead.
+  ['o_pair','o_sl','o_tp'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const field = el.closest('.field');
+    if(field) field.classList.toggle('field-locked', isDemoMode);
+  });
+  const logicGrid = document.getElementById('orderLogicChoices');
+  if(logicGrid){
+    const field = logicGrid.closest('.field');
+    if(field) field.classList.toggle('field-locked', isDemoMode);
+  }
+  const notesField = document.getElementById('o_notes');
+  if(notesField){
+    notesField.placeholder = isDemoMode
+      ? 'Trial mode: write your pair, SL/TP and logic here — e.g. "XAUUSD sell, SL 2365, TP 2340, liquidity sweep + CHoCH"'
+      : 'Setup context, level, timeframe...';
+  }
+  // Psychology: only "Why are you trading" stays open during the trial.
+  const checkinsCard = document.getElementById('psychCheckinsCard');
+  if(checkinsCard) checkinsCard.classList.toggle('card-locked', isDemoMode);
+  const monkField = document.getElementById('psychMonkField');
+  if(monkField) monkField.classList.toggle('field-locked', isDemoMode);
+}
+function openDemoTease(title, copy){
+  document.getElementById('demoLockedFeatureTitle').textContent = title;
+  document.getElementById('demoLockedFeatureCopy').textContent = copy;
+  document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function showLockedFeatureTease(view){
   const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm' };
   const label = labels[view] || 'This room';
-  document.getElementById('demoLockedFeatureTitle').textContent = `${label} is for real accounts`;
-  document.getElementById('demoLockedFeatureCopy').textContent =
-    `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`;
-  document.getElementById('demoLockedFeatureOverlay').classList.add('show');
+  openDemoTease(`${label} is for real accounts`, `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`);
 }
+function showLockedFieldTease(label){
+  openDemoTease(`${label} is locked in the trial`, `Trial accounts log setups by feel, not by form field — write your ${label.toLowerCase()} straight into Notes for now. It unlocks fully with real access.`);
+}
+// One-time wiring: intercept the locked Order Book and Psychology inputs so a
+// click/tap always shows the tease instead of silently doing nothing.
+function setupDemoFieldGuards(){
+  const guarded = [
+    { id:'o_pair', label:'Pair / Instrument' },
+    { id:'o_sl', label:'Stop Loss' },
+    { id:'o_tp', label:'Take Profit' },
+    { id:'p_monk', label:'Monk Code' }
+  ];
+  guarded.forEach(({id,label})=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('mousedown', (e)=>{
+      if(!isDemoMode) return;
+      e.preventDefault();
+      el.blur();
+      showLockedFieldTease(label);
+    });
+    el.addEventListener('keydown', (e)=>{ if(isDemoMode) e.preventDefault(); });
+  });
+  const logicGrid = document.getElementById('orderLogicChoices');
+  if(logicGrid){
+    logicGrid.addEventListener('click', (e)=>{
+      if(!isDemoMode) return;
+      e.preventDefault(); e.stopPropagation();
+      showLockedFieldTease('Logic tagging');
+    }, true);
+  }
+  const checkinsCard = document.getElementById('psychCheckinsCard');
+  if(checkinsCard){
+    checkinsCard.addEventListener('click', (e)=>{
+      if(!isDemoMode) return;
+      e.preventDefault(); e.stopPropagation();
+      showLockedFieldTease('Emotional check-in history');
+    }, true);
+  }
+}
+setupDemoFieldGuards();
 function exitDemo(){
   isDemoMode = false;
   currentUser = null;
@@ -4426,6 +4520,11 @@ function showCalDay(iso){
 
 /* ============ GET APP (platform-aware) ============ */
 function handleGetApp(){
+  if(isDemoMode){
+    openDemoTease('Get the App is for real accounts', 'The installable app carries your synced data with it — that only exists once you\'re past the trial. Stay in-browser for now.');
+    toggleSidebar(false);
+    return;
+  }
   const ua = navigator.userAgent || navigator.vendor || window.opera;
   const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
   const isAndroid = /Android/i.test(ua);
