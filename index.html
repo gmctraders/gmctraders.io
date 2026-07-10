@@ -1006,9 +1006,14 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <p>Ghost Discipline only unlocks once your risk parameters are set. This is intentional — a trader without written rules is not yet ready to trade.</p>
     </div>
     <div class="gate-card">
+      <div class="field">
+        <label>Account currency</label>
+        <select id="g_currency" onchange="updateCurrencyLabels()"></select>
+        <div class="hint" style="margin-top:6px;">Every dollar amount in the app — risk, P&amp;L, calendar, journal — will be shown in this currency. Defaults to USD.</div>
+      </div>
       <div class="row2">
         <div class="field">
-          <label>Account balance ($)</label>
+          <label>Account balance (<span class="cur-sym">$</span>)</label>
           <input type="number" id="g_accountBalance" min="0" step="1" placeholder="e.g. 5000">
         </div>
         <div class="field">
@@ -1019,7 +1024,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <div class="hint calc" id="gateRiskPreview" style="margin-bottom:14px;"></div>
       <div class="row2">
         <div class="field">
-          <label>Maximum daily loss ($)</label>
+          <label>Maximum daily loss (<span class="cur-sym">$</span>)</label>
           <input type="number" id="g_maxDailyLoss" min="0" step="1" placeholder="e.g. 200">
         </div>
         <div class="field">
@@ -1043,7 +1048,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <input type="number" id="g_coolingOff" min="0" step="1" placeholder="e.g. 30">
         </div>
         <div class="field">
-          <label>Max risk per single trade ($)</label>
+          <label>Max risk per single trade (<span class="cur-sym">$</span>)</label>
           <input type="number" id="g_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100">
         </div>
       </div>
@@ -1516,13 +1521,17 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         </div>
       </div>
       <div class="card tilt">
+        <div class="field">
+          <label>Account currency</label>
+          <select id="r_currency" onchange="updateCurrencyLabels()"></select>
+        </div>
         <div class="row2">
-          <div class="field"><label>Account balance ($)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="updateRulesRiskPreview()"></div>
+          <div class="field"><label>Account balance (<span class="cur-sym">$</span>)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="updateRulesRiskPreview()"></div>
           <div class="field"><label>Risk per trade (%)</label><input type="number" id="r_riskPerTrade" min="0" step="0.1" oninput="updateRulesRiskPreview()"></div>
         </div>
         <div class="hint calc" id="rulesRiskPreview" style="margin-bottom:14px;"></div>
         <div class="row2">
-          <div class="field"><label>Maximum daily loss ($)</label><input type="number" id="r_maxDailyLoss" min="0" step="1"></div>
+          <div class="field"><label>Maximum daily loss (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxDailyLoss" min="0" step="1"></div>
           <div class="field"><label>Maximum trades per day</label><input type="number" id="r_maxTrades" min="1" step="1"></div>
         </div>
         <div class="row2">
@@ -1531,7 +1540,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         </div>
         <div class="row2">
           <div class="field"><label>Cooling-off period after a loss (minutes)</label><input type="number" id="r_coolingOff" min="0" step="1" placeholder="e.g. 30"></div>
-          <div class="field"><label>Max risk per single trade ($)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100"></div>
+          <div class="field"><label>Max risk per single trade (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100"></div>
         </div>
         <button class="btn btn-primary" onclick="saveRules()">Save Rules</button>
         <div class="hint" id="rulesSavedHint" style="margin-top:10px"></div>
@@ -1552,7 +1561,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <h2>Challenge <span class="accent">Setup</span></h2>
         <div class="row2">
           <div class="field"><label>Prop firm name</label><input type="text" id="pf_firmName" placeholder="e.g. FTMO, MFF, Apex"></div>
-          <div class="field"><label>Starting account size ($)</label><input type="number" id="pf_startingBalance" min="0" step="1"></div>
+          <div class="field"><label>Starting account size (<span class="cur-sym">$</span>)</label><input type="number" id="pf_startingBalance" min="0" step="1"></div>
         </div>
         <div class="pf-phase-row" id="pfPhaseRow">
           <div class="pf-phase-chip" data-phase="challenge" onclick="setPfPhase('challenge')">Challenge</div>
@@ -1722,8 +1731,8 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
     <div class="hint calc" id="tradeRiskPreview" style="margin-bottom:10px;"></div>
     <div class="row2">
       <div class="field"><label>R:R achieved</label><input type="number" step="0.1" id="t_rr" placeholder="e.g. 2"></div>
-      <div class="field" id="lossAmountField"><label>Amount lost ($)</label><input type="number" step="1" id="t_lossAmount" placeholder="e.g. 40"></div>
-      <div class="field" id="winAmountField"><label>Amount won ($)</label><input type="number" step="1" id="t_winAmount" placeholder="e.g. 80"></div>
+      <div class="field" id="lossAmountField"><label>Amount lost (<span class="cur-sym">$</span>)</label><input type="number" step="1" id="t_lossAmount" placeholder="e.g. 40"></div>
+      <div class="field" id="winAmountField"><label>Amount won (<span class="cur-sym">$</span>)</label><input type="number" step="1" id="t_winAmount" placeholder="e.g. 80"></div>
     </div>
     <div class="field">
       <label>Mindset while placing this trade</label>
@@ -1755,7 +1764,7 @@ const SUPABASE_KEY = "sb_publishable_xSqC_Qa5UFZl9SzDmkTs0A_dNslQNGS";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_STATE = {
-  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null },
+  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null, currency:'USD' },
   propFirm:{ firmName:'', phase:'challenge', startingBalance:null, profitTarget:null, maxDailyLossPct:null, maxOverallDrawdownPct:null, drawdownType:'static', minTradingDays:null, consistencyRulePct:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
   psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null, preTradeCheckins:[], reviewsSeen:{ weekly:null, monthly:null } },
@@ -1786,6 +1795,25 @@ const STRAT_TAG_COLORS = {
   breakout:'#2dd4bf', reversal:'#f43f5e', trend:'#22c55e', scalp:'#8b90a0', news:'#34d399', range:'#565b6c'
 };
 const STREAK_MILESTONES = [3,7,14,30,60,100];
+/* ============ CURRENCY ============ */
+const CURRENCIES = {
+  USD:{ symbol:'$',  name:'US Dollar' },
+  EUR:{ symbol:'€',  name:'Euro' },
+  GBP:{ symbol:'£',  name:'British Pound' },
+  ZAR:{ symbol:'R',  name:'South African Rand' },
+  JPY:{ symbol:'¥',  name:'Japanese Yen' },
+  AUD:{ symbol:'A$', name:'Australian Dollar' },
+  CAD:{ symbol:'C$', name:'Canadian Dollar' },
+  CHF:{ symbol:'Fr', name:'Swiss Franc' },
+  NZD:{ symbol:'NZ$',name:'New Zealand Dollar' },
+  INR:{ symbol:'₹',  name:'Indian Rupee' },
+  NGN:{ symbol:'₦',  name:'Nigerian Naira' },
+  AED:{ symbol:'AED',name:'UAE Dirham' }
+};
+const CURRENCY_OPTIONS_HTML = Object.entries(CURRENCIES).map(([code,c])=>
+  `<option value="${code}">${c.symbol} — ${c.name} (${code})</option>`).join('');
+function curSym(){ return (CURRENCIES[state.rules.currency] || CURRENCIES.USD).symbol; }
+function updateCurrencyLabels(){ document.querySelectorAll('.cur-sym').forEach(el=>el.textContent=curSym()); }
 
 /* ============ STRATEGY TYPES & LOGIC LIBRARY ============ */
 const STRATEGY_TYPES = {
@@ -2433,15 +2461,15 @@ function showPeriodReview(kind, label, data){
   const pnlColor = data.pnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
   let html = `
     <div class="review-stat-grid">
-      <div class="review-stat"><span class="review-stat-label">Net P/L</span><span class="review-stat-val" style="color:${pnlColor}">${data.pnl>=0?'+$':'-$'}${Math.abs(data.pnl).toFixed(0)}</span></div>
+      <div class="review-stat"><span class="review-stat-label">Net P/L</span><span class="review-stat-val" style="color:${pnlColor}">${data.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(data.pnl).toFixed(0)}</span></div>
       <div class="review-stat"><span class="review-stat-label">Trades</span><span class="review-stat-val">${data.tradeCount}</span></div>
       <div class="review-stat"><span class="review-stat-label">Win Rate</span><span class="review-stat-val">${data.winRate}%</span></div>
       <div class="review-stat"><span class="review-stat-label">Avg RR</span><span class="review-stat-val">${data.avgRR!=null?data.avgRR.toFixed(2):'—'}</span></div>
     </div>`;
   if(data.bestDay || data.worstDay){
     html += `<div class="review-block">`;
-    if(data.bestDay) html += `<div class="check-item pass"><span>↑</span>Best day: ${data.bestDay.date} (${data.bestDay.pnl>=0?'+$':'-$'}${Math.abs(data.bestDay.pnl).toFixed(0)})</div>`;
-    if(data.worstDay) html += `<div class="check-item fail"><span>↓</span>Worst day: ${data.worstDay.date} (${data.worstDay.pnl>=0?'+$':'-$'}${Math.abs(data.worstDay.pnl).toFixed(0)})</div>`;
+    if(data.bestDay) html += `<div class="check-item pass"><span>↑</span>Best day: ${data.bestDay.date} (${data.bestDay.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(data.bestDay.pnl).toFixed(0)})</div>`;
+    if(data.worstDay) html += `<div class="check-item fail"><span>↓</span>Worst day: ${data.worstDay.date} (${data.worstDay.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(data.worstDay.pnl).toFixed(0)})</div>`;
     html += `</div>`;
   }
   html += `<div class="review-block">
@@ -2452,8 +2480,8 @@ function showPeriodReview(kind, label, data){
     const worstMood = data.moodRows[0];
     html += `<div class="review-block">
       <div style="font-size:12px;color:var(--slate);margin-bottom:6px;">How you traded, by emotional state</div>
-      ${data.moodRows.map(m=>`<div class="check-item ${m.pnl>=0?'pass':'fail'}"><span>${m.pnl>=0?'✓':'✕'}</span>${m.label}: ${m.trades} trade${m.trades===1?'':'s'}, ${m.pnl>=0?'+$':'-$'}${Math.abs(m.pnl).toFixed(0)}</div>`).join('')}
-      ${worstMood.pnl<0 ? `<div class="ok-banner" style="border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);margin-top:10px;">Trades logged as "${worstMood.label.replace(/^\S+\s/,'')}" cost you ${worstMood.pnl>=0?'+$':'-$'}${Math.abs(worstMood.pnl).toFixed(0)} this period. Worth watching.</div>` : ''}
+      ${data.moodRows.map(m=>`<div class="check-item ${m.pnl>=0?'pass':'fail'}"><span>${m.pnl>=0?'✓':'✕'}</span>${m.label}: ${m.trades} trade${m.trades===1?'':'s'}, ${m.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(m.pnl).toFixed(0)}</div>`).join('')}
+      ${worstMood.pnl<0 ? `<div class="ok-banner" style="border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);margin-top:10px;">Trades logged as "${worstMood.label.replace(/^\S+\s/,'')}" cost you ${worstMood.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(worstMood.pnl).toFixed(0)} this period. Worth watching.</div>` : ''}
     </div>`;
   }
   document.getElementById('periodReviewBody').innerHTML = html;
@@ -2475,14 +2503,14 @@ function updateGateRiskPreview(){
   const pct = document.getElementById('g_riskPerTrade').value;
   const el = document.getElementById('gateRiskPreview');
   const d = riskDollar(bal, pct);
-  el.textContent = d!=null ? `= $${d} at risk per trade` : '';
+  el.textContent = d!=null ? `= ${curSym()}${d} at risk per trade` : '';
 }
 function updateRulesRiskPreview(){
   const bal = document.getElementById('r_accountBalance').value;
   const pct = document.getElementById('r_riskPerTrade').value;
   const el = document.getElementById('rulesRiskPreview');
   const d = riskDollar(bal, pct);
-  el.textContent = d!=null ? `= $${d} at risk per trade` : '';
+  el.textContent = d!=null ? `= ${curSym()}${d} at risk per trade` : '';
 }
 
 /* ============ GATE (mandatory rule builder) ============ */
@@ -2503,6 +2531,7 @@ async function submitGateRules(){
   }
   vals.coolingOffMinutes = numOrNullFrom('g_coolingOff');
   vals.maxRiskPerTrade = numOrNullFrom('g_maxRiskPerTrade');
+  vals.currency = document.getElementById('g_currency').value || 'USD';
   state.rules = vals;
   state.rulesCompleted = true;
   await saveState();
@@ -2627,7 +2656,7 @@ function animateCount(el, from, to, isMoney, decimals){
     const p = Math.min(1, (now-start)/dur);
     const eased = 1 - Math.pow(1-p, 3);
     const val = from + (to-from)*eased;
-    el.textContent = (isMoney? (val>=0?'+$':'-$') : '') + (isMoney ? Math.abs(val).toFixed(decimals||0) : Math.round(val));
+    el.textContent = (isMoney? (val>=0?('+'+curSym()):('-'+curSym())) : '') + (isMoney ? Math.abs(val).toFixed(decimals||0) : Math.round(val));
     if(p<1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
@@ -2636,6 +2665,7 @@ function animateCount(el, from, to, isMoney, decimals){
 /* ============ RENDER ============ */
 function renderAll(){
   renderDemoStatus();
+  updateCurrencyLabels();
   renderTraderFilterOptions();
   renderDashboard(); renderRulesForm(); renderPropFirmForm(); renderPropFirmCompliance(); renderSessionForm(); renderPsychologyForm(); renderJournal(); updateSessionPill();
   renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges(); renderDisciplineScore();
@@ -2670,7 +2700,7 @@ function renderDashboard(){
   document.getElementById('statTrades').className = 'stat' + (maxT && state.day.tradesCount>=maxT ? ' bad' : '');
 
   const maxL = state.rules.maxDailyLoss;
-  document.getElementById('statLoss').querySelector('b').textContent = '$' + state.day.lossUsed;
+  document.getElementById('statLoss').querySelector('b').textContent = curSym() + state.day.lossUsed;
   document.getElementById('statLoss').className = 'stat' + (maxL && state.day.lossUsed>=maxL ? ' bad' : (maxL && state.day.lossUsed>=maxL*0.7 ? ' warn':''));
 
   const bal = state.rules.accountBalance;
@@ -2685,13 +2715,14 @@ function renderDashboard(){
   const todayIso = todayStr();
   const todayPnl = filteredTrades().filter(t=>t.date===todayIso).reduce((s,t)=>s+pnlOf(t),0);
   const tpEl = document.getElementById('statTodayPnl');
-  tpEl.querySelector('b').textContent = (todayPnl>=0?'+$':'-$') + Math.abs(todayPnl).toFixed(0);
+  tpEl.querySelector('b').textContent = (todayPnl>=0?('+'+curSym()):('-'+curSym())) + Math.abs(todayPnl).toFixed(0);
   tpEl.className = 'stat' + (todayPnl>0 ? ' good' : (todayPnl<0 ? ' bad' : ''));
 
   document.getElementById('whyPreview').textContent = state.psychology.why?.trim() ? state.psychology.why : 'Nothing written yet. Visit Psychology and define why you trade.';
   document.getElementById('monkPreview').textContent = state.psychology.monk?.trim() ? state.psychology.monk : 'No principles written yet.';
 }
 function renderRulesForm(){
+  document.getElementById('r_currency').value = state.rules.currency || 'USD';
   document.getElementById('r_accountBalance').value = state.rules.accountBalance ?? '';
   document.getElementById('r_maxDailyLoss').value = state.rules.maxDailyLoss ?? '';
   document.getElementById('r_maxTrades').value = state.rules.maxTrades ?? '';
@@ -2701,9 +2732,11 @@ function renderRulesForm(){
   document.getElementById('r_coolingOff').value = state.rules.coolingOffMinutes ?? '';
   document.getElementById('r_maxRiskPerTrade').value = state.rules.maxRiskPerTrade ?? '';
   updateRulesRiskPreview();
+  updateCurrencyLabels();
 }
 async function saveRules(){
   state.rules = {
+    currency: document.getElementById('r_currency').value || 'USD',
     accountBalance: numOrNullFrom('r_accountBalance'),
     maxDailyLoss: numOrNullFrom('r_maxDailyLoss'),
     maxTrades: numOrNullFrom('r_maxTrades'),
@@ -2713,7 +2746,7 @@ async function saveRules(){
     coolingOffMinutes: numOrNullFrom('r_coolingOff'),
     maxRiskPerTrade: numOrNullFrom('r_maxRiskPerTrade'),
   };
-  await saveState(); renderDashboard(); renderGauges();
+  await saveState(); renderDashboard(); renderGauges(); updateCurrencyLabels();
   showToast('Rules saved');
 }
 
@@ -2842,7 +2875,7 @@ function renderPropFirmCompliance(){
   headerBadge.className = 'pf-badge ' + m.overallStatus;
   headerBadge.textContent = m.overallStatus==='pass' ? 'On Track' : (m.overallStatus==='warn' ? 'At Risk' : 'Rule Breached');
 
-  const fmt = n => (n<0?'-':'') + '$' + Math.abs(n).toFixed(0);
+  const fmt = n => (n<0?'-':'') + curSym() + Math.abs(n).toFixed(0);
 
   const profitPct = m.profitTargetDollar ? (m.totalProfit / m.profitTargetDollar * 100) : 0;
   const ddPct = m.maxOverallDrawdownDollar ? (m.maxDrawdownHit / m.maxOverallDrawdownDollar * 100) : 0;
@@ -3065,7 +3098,7 @@ function updateTradeRiskPreview(){
   const el = document.getElementById('tradeRiskPreview');
   const rrVal = parseFloat(document.getElementById('t_rr').value) || null;
   if(d!=null){
-    el.textContent = `Planned risk: ${pct}% of $${state.rules.accountBalance} = $${d}`;
+    el.textContent = `Planned risk: ${pct}% of ${curSym()}${state.rules.accountBalance} = ${curSym()}${d}`;
     const lossInput = document.getElementById('t_lossAmount');
     const winInput = document.getElementById('t_winAmount');
     if(document.getElementById('t_result').value==='loss' && !lossInput.dataset.touched){
@@ -3079,6 +3112,10 @@ function updateTradeRiskPreview(){
   }
 }
 document.addEventListener('DOMContentLoaded', ()=>{
+  const gCur = document.getElementById('g_currency');
+  if(gCur){ gCur.innerHTML = CURRENCY_OPTIONS_HTML; gCur.value = 'USD'; }
+  const rCur = document.getElementById('r_currency');
+  if(rCur) rCur.innerHTML = CURRENCY_OPTIONS_HTML;
   const li = document.getElementById('t_lossAmount');
   if(li) li.addEventListener('input', ()=>{ li.dataset.touched='1'; });
   const wi = document.getElementById('t_winAmount');
@@ -3135,7 +3172,7 @@ function renderJournal(){
             ${t.mood ? `<span class="tag-chip mood">${MOOD_LABELS[t.mood]||t.mood}</span>` : ''}
           </div>
         </div>
-        <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
+        <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
       </div>`;
     }).join('');
   }
@@ -3148,7 +3185,7 @@ function renderJournal(){
   document.getElementById('j_winrate').textContent = total ? Math.round(wins/total*100)+'%' : '0%';
   document.getElementById('j_avgrr').textContent = avgRR;
   const pnlEl = document.getElementById('j_totalpnl');
-  pnlEl.textContent = (totalPnl>=0?'+$':'-$') + Math.abs(totalPnl).toFixed(0);
+  pnlEl.textContent = (totalPnl>=0?('+'+curSym()):('-'+curSym())) + Math.abs(totalPnl).toFixed(0);
   pnlEl.style.color = totalPnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
 }
 
@@ -3180,7 +3217,7 @@ function renderLeaderboards(){
     if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="5" style="color:var(--slate);font-size:12px;padding:12px 10px;">No trades yet</td></tr>'; return; }
     tbody.innerHTML = '<tr><th>Name</th><th>Trades</th><th>Win%</th><th>Avg RR</th><th>P/L</th></tr>' + rows.map((r,i)=>`
       <tr><td class="lead-name">${medal(i)}${escapeHtml(r.name)}</td><td>${r.trades}</td><td>${r.winRate}%</td><td>${r.avgRR}</td>
-      <td style="color:${r.pnl>=0?'var(--win-bright)':'var(--loss-bright)'};font-family:'IBM Plex Mono',monospace">${r.pnl>=0?'+$':'-$'}${Math.abs(r.pnl).toFixed(0)}</td></tr>`).join('');
+      <td style="color:${r.pnl>=0?'var(--win-bright)':'var(--loss-bright)'};font-family:'IBM Plex Mono',monospace">${r.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(r.pnl).toFixed(0)}</td></tr>`).join('');
   };
   renderRows(traderRows, '#leadTraderTable tbody');
   renderRows(stratRows, '#leadStrategyTable tbody');
@@ -3310,7 +3347,7 @@ function renderMoodBreakdown(){
     <div class="confluence-row">
       <div class="confluence-label">${r.label}</div>
       <div class="confluence-bar-wrap"><div class="confluence-bar" style="width:${r.winRate}%;background:${barColor}"></div></div>
-      <div class="confluence-stats"><b>${r.winRate}%</b><span>${r.wins}W / ${r.losses}L · ${r.trades} trades · ${r.pnl>=0?'+$':'-$'}${Math.abs(r.pnl).toFixed(0)}</span></div>
+      <div class="confluence-stats"><b>${r.winRate}%</b><span>${r.wins}W / ${r.losses}L · ${r.trades} trades · ${r.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(r.pnl).toFixed(0)}</span></div>
     </div>`;
   }).join('');
 }
@@ -3351,7 +3388,7 @@ function renderTimingBreakdown(){
     if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="4" style="color:var(--slate);font-size:12px;padding:12px 10px;">No trades yet</td></tr>'; return; }
     tbody.innerHTML = '<tr><th>When</th><th>Trades</th><th>Win%</th><th>P/L</th></tr>' + rows.map(r=>`
       <tr><td class="lead-name">${r.name}</td><td>${r.trades}</td><td>${r.winRate}%</td>
-      <td style="color:${r.pnl>=0?'var(--win-bright)':'var(--loss-bright)'};font-family:'IBM Plex Mono',monospace">${r.pnl>=0?'+$':'-$'}${Math.abs(r.pnl).toFixed(0)}</td></tr>`).join('');
+      <td style="color:${r.pnl>=0?'var(--win-bright)':'var(--loss-bright)'};font-family:'IBM Plex Mono',monospace">${r.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(r.pnl).toFixed(0)}</td></tr>`).join('');
   };
   renderTimingRows(dowRows, '#dowTable tbody');
   renderTimingRows(hourRows, '#hourTable tbody');
@@ -3371,7 +3408,7 @@ function downloadCSV(filename, rows){
   URL.revokeObjectURL(url);
 }
 function exportTradesCSV(){
-  const rows = [['Date','Time','Result','Trader','Strategy','Strategy Type','RR','Win $','Loss $','P/L','Mood','Logic Tags','Notes']];
+  const rows = [['Date','Time','Result','Trader','Strategy','Strategy Type','RR',`Win ${curSym()}`,`Loss ${curSym()}`,'P/L','Mood','Logic Tags','Notes']];
   filteredTrades().forEach(t=>{
     rows.push([t.date, t.time, t.result, traderName(t.trader), strategyName(t.strategy)||'', t.strategyType||'', t.rr ?? '',
       t.winAmount||0, t.lossAmount||0, pnlOf(t).toFixed(2), t.mood ? (MOOD_LABELS[t.mood]||t.mood) : '', (t.logics||[]).map(logicLabel).join('; '), t.notes||'']);
@@ -3481,7 +3518,7 @@ function renderEquityChart(containerId, totalId, subId){
   const trades = filteredTrades();
   if(trades.length===0){
     container.innerHTML = '<div class="empty-state"><span class="glyph">📈</span>No trades yet — your equity curve will build as you log trades.</div>';
-    if(totalEl){ totalEl.textContent='$0'; totalEl.className='equity-total'; }
+    if(totalEl){ totalEl.textContent=curSym()+'0'; totalEl.className='equity-total'; }
     setEquityStats([]);
     return;
   }
@@ -3609,7 +3646,7 @@ function renderEquityChart(containerId, totalId, subId){
       let nearest = 0, best = Infinity;
       topPts.forEach((p,i)=>{ const d = Math.abs(p[0]-loc.x); if(d<best){best=d; nearest=i;} });
       const val = points[nearest].y;
-      showTip(e.clientX, e.clientY, `<b>${points[nearest].label}</b><br>${val>=0?'+$':'-$'}${Math.abs(val).toFixed(0)}`);
+      showTip(e.clientX, e.clientY, `<b>${points[nearest].label}</b><br>${val>=0?('+'+curSym()):('-'+curSym())}${Math.abs(val).toFixed(0)}`);
     });
     hitRect.addEventListener('mouseleave', hideTip);
   }
@@ -3634,9 +3671,9 @@ function setEquityStats(trades, maxDD){
   const grossWin = wins.reduce((s,t)=>s+(parseFloat(t.winAmount)||0),0);
   const grossLoss = losses.reduce((s,t)=>s+(parseFloat(t.lossAmount)||0),0);
   pfEl.textContent = grossLoss>0 ? (grossWin/grossLoss).toFixed(2) : (grossWin>0?'∞':'—');
-  awEl.textContent = '$'+(wins.length?(grossWin/wins.length).toFixed(0):'0');
-  alEl.textContent = '$'+(losses.length?(grossLoss/losses.length).toFixed(0):'0');
-  if(ddEl) ddEl.textContent = '$'+Math.round(maxDD||0);
+  awEl.textContent = curSym()+(wins.length?(grossWin/wins.length).toFixed(0):'0');
+  alEl.textContent = curSym()+(losses.length?(grossLoss/losses.length).toFixed(0):'0');
+  if(ddEl) ddEl.textContent = curSym()+Math.round(maxDD||0);
 }
 
 /* ============ DISCIPLINE SCORE DIAL (large 3D instrument) ============ */
@@ -3721,7 +3758,7 @@ function renderGauges(){
   const maxL = state.rules.maxDailyLoss;
   const lossPct = maxL ? state.day.lossUsed/maxL : 0;
   units.push({ id:'gLoss', pct:lossPct, cls: lossPct>=1?'bad':(lossPct>=0.7?'warn':'good'),
-    val: maxL ? `$${state.day.lossUsed}` : '—', cap:'Daily loss used'+(maxL?` / $${maxL}`:'') });
+    val: maxL ? `${curSym()}${state.day.lossUsed}` : '—', cap:'Daily loss used'+(maxL?` / ${curSym()}${maxL}`:'') });
 
   const maxT = state.rules.maxTrades;
   const tPct = maxT ? state.day.tradesCount/maxT : 0;
@@ -3811,7 +3848,7 @@ function runPretradeChecks(){
   if(state.rules.maxDailyLoss!=null){
     const fail = state.day.lossUsed >= state.rules.maxDailyLoss;
     if(fail) violated = true;
-    checks.push({label:`Daily loss limit ($${state.day.lossUsed}/$${state.rules.maxDailyLoss})`, fail});
+    checks.push({label:`Daily loss limit (${curSym()}${state.day.lossUsed}/${curSym()}${state.rules.maxDailyLoss})`, fail});
   }
   if(state.rules.maxConsecLosses!=null){
     const fail = state.consecutiveLosses >= state.rules.maxConsecLosses;
@@ -4083,7 +4120,7 @@ function fireConfetti(){
 // Keeps calendar cells readable no matter how large a trader's numbers get —
 // abbreviates thousands/millions, full precision is still available via the cell's title tooltip and the day-detail panel.
 function fmtCalPnl(n){
-  const sign = n>=0 ? '+$' : '-$';
+  const sign = n>=0 ?('+'+curSym()):('-'+curSym());
   const abs = Math.abs(n);
   let body;
   if(abs >= 1000000) body = (abs/1000000).toFixed(abs>=10000000?0:1).replace(/\.0$/,'')+'M';
@@ -4132,7 +4169,7 @@ function renderCalendar(){
       const tier = disciplineTier(disc.score);
       discDot = `<div class="cal-disc-dot" style="background:${tier.color};box-shadow:0 0 7px ${tier.color}" title="Discipline score: ${disc.score}"></div>`;
     }
-    const pnlTitle = dayTrades.length ? `${dayTrades.length} trade${dayTrades.length>1?'s':''} · ${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(2)}` : '';
+    const pnlTitle = dayTrades.length ? `${dayTrades.length} trade${dayTrades.length>1?'s':''} · ${dayPnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(dayPnl).toFixed(2)}` : '';
     html += `<div class="${cls}" ${dayTrades.length?`onclick="showCalDay('${iso}')"`:''} ${pnlTitle?`title="${pnlTitle}"`:''}>
       ${discDot}
       <div class="n">${day}</div>
@@ -4140,7 +4177,7 @@ function renderCalendar(){
     </div>`;
   }
   grid.innerHTML = html;
-  document.getElementById('calMonthPnl').textContent = (monthPnl>=0?'+$':'-$')+Math.abs(monthPnl).toFixed(0);
+  document.getElementById('calMonthPnl').textContent = (monthPnl>=0?('+'+curSym()):('-'+curSym()))+Math.abs(monthPnl).toFixed(0);
   document.getElementById('calMonthPnl').style.color = monthPnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
   document.getElementById('calMonthTrades').textContent = monthTrades;
   document.getElementById('calMonthWinRate').textContent = monthTrades ? Math.round(monthWins/monthTrades*100)+'%' : '0%';
@@ -4160,7 +4197,7 @@ function showCalDay(iso){
       <div style="font-family:'Fraunces',serif;font-weight:650;font-size:15px;color:var(--platinum);">${iso} · ${wins}W / ${losses}L</div>
       <div style="display:flex;align-items:center;gap:14px;">
         ${disc ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${disciplineTier(disc.score).color}">Discipline ${disc.score}/100</div>` : ''}
-        <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:${dayPnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:${dayPnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${dayPnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(dayPnl).toFixed(0)}</div>
       </div>
     </div>
     <div class="trade-list" style="max-height:260px">
@@ -4179,7 +4216,7 @@ function showCalDay(iso){
               ${t.mood ? `<span class="tag-chip mood">${MOOD_LABELS[t.mood]||t.mood}</span>` : ''}
             </div>
           </div>
-          <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?'+$':'-$'}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
+          <div class="trade-pnl"><b style="color:${pnl>=0?'var(--win-bright)':'var(--loss-bright)'}">${pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(pnl).toFixed(0)}</b><span class="rr">${t.rr ?? '—'} RR</span></div>
         </div>`;}).join('')}
     </div>`;
 }
