@@ -248,6 +248,31 @@ a{color:var(--bronze-bright);}
 .btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 var(--bronze-dim);}
 .btn-gold:disabled{opacity:0.5;cursor:not-allowed;}
 .auth-foot{text-align:center;font-size:11px;color:var(--slate-dim);margin-top:20px;line-height:1.5;}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:22px 0 16px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--steel);}
+.auth-divider span{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--slate-dim);}
+.btn-demo{
+  width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-bright);
+  padding:12px 0;border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:12.5px;
+  letter-spacing:0.02em;cursor:pointer;transition:all .15s ease;
+}
+.btn-demo:hover{border-color:var(--gold);background:rgba(212,175,55,0.08);}
+.auth-demo-hint{font-size:10.5px;color:var(--slate-dim);text-align:center;margin-top:9px;line-height:1.5;}
+/* ============ DEMO / TRIAL MODE ============ */
+.demo-pill{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  padding:9px 12px;border-radius:12px;border:1px solid rgba(212,175,55,0.35);background:rgba(212,175,55,0.08);color:var(--gold-bright);margin-bottom:10px;
+}
+.demo-pill b{font-weight:700;}
+.demo-pill .demo-exit{background:transparent;border:none;color:var(--gold-bright);text-decoration:underline;cursor:pointer;font-size:10px;font-family:'Instrument Sans',sans-serif;padding:0;}
+.demo-banner-top{
+  display:none;align-items:center;justify-content:center;gap:10px;text-align:center;
+  background:linear-gradient(90deg, rgba(212,175,55,0.12), rgba(212,175,55,0.05));
+  border-bottom:1px solid rgba(212,175,55,0.3);color:var(--gold-bright);font-size:12px;font-family:'IBM Plex Mono',monospace;
+  padding:9px 14px;position:sticky;top:0;z-index:30;
+}
+.demo-banner-top.show{display:flex;}
+.demo-banner-top a{color:var(--gold-bright);text-decoration:underline;cursor:pointer;}
 
 /* ============ GATE SCREEN ============ */
 #gateScreen{min-height:100vh;display:none;align-items:flex-start;justify-content:center;padding:64px 20px;}
@@ -544,6 +569,12 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .tag-chip{font-size:9.5px;padding:2px 8px;border-radius:100px;background:rgba(16,185,129,0.1);color:var(--bronze-bright);border:1px solid rgba(16,185,129,0.25);text-transform:uppercase;letter-spacing:0.04em;}
 .tag-chip.trader{background:rgba(139,144,160,0.12);color:#c7cbd8;border-color:rgba(139,144,160,0.28);}
 .tag-chip.mood{background:rgba(245,166,35,0.1);color:var(--amber);border-color:rgba(245,166,35,0.28);text-transform:none;letter-spacing:0.01em;}
+.tag-chip.pair{background:rgba(212,175,55,0.12);color:var(--gold-bright);border-color:rgba(212,175,55,0.32);font-weight:700;}
+.order-levels{display:flex;gap:14px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate);}
+.order-levels b{color:var(--platinum);font-weight:600;}
+.order-levels .lv-sl b{color:var(--loss-bright);}
+.order-levels .lv-tp b{color:var(--win-bright);}
+.order-pair-badge{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;color:var(--gold-bright);letter-spacing:0.02em;}
 .trade-pnl{font-family:'IBM Plex Mono',monospace;font-size:13px;flex-shrink:0;text-align:right;}
 .trade-pnl b{display:block;font-size:13.5px;}
 .trade-pnl .rr{font-size:10.5px;color:var(--slate);}
@@ -804,19 +835,26 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
 .cal-dow{text-align:center;font-size:9.5px;color:var(--slate-dim);text-transform:uppercase;letter-spacing:0.06em;padding-bottom:4px;}
 .cal-disc-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;}
-.cal-day{ aspect-ratio:1; border-radius:11px; border:1px solid var(--steel); display:flex;flex-direction:column;
+.cal-day{ aspect-ratio:1; min-width:0; border-radius:11px; border:1px solid var(--steel); display:flex;flex-direction:column;
   align-items:center;justify-content:center;font-size:12px;color:var(--slate);cursor:default;position:relative;transition:transform .15s ease;
-  background:rgba(255,255,255,0.012);}
+  background:rgba(255,255,255,0.012); padding:2px; overflow:hidden;}
 .cal-day.empty{border:none;background:none;}
 .cal-day.has-trades{cursor:pointer;}
 .cal-day.has-trades:hover{transform:translateY(-3px) scale(1.05);}
 .cal-day.win-day{background:rgba(16,185,129,0.14);border-color:rgba(16,185,129,0.4);color:var(--platinum);}
 .cal-day.loss-day{background:rgba(244,63,94,0.14);border-color:rgba(244,63,94,0.4);color:var(--platinum);}
 .cal-day.today{box-shadow:0 0 0 1.5px var(--bronze-bright);}
-.cal-day .n{font-weight:700;}
-.cal-day .pnl{font-size:8.5px;margin-top:2px;font-family:'IBM Plex Mono',monospace;font-weight:700;}
+.cal-day .n{font-weight:700;flex-shrink:0;}
+.cal-day .pnl{
+  font-size:clamp(6.5px, 1.9vw, 8.5px); margin-top:2px;font-family:'IBM Plex Mono',monospace;font-weight:700;
+  max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 2px;
+}
 .cal-day.win-day .pnl{color:var(--win-bright);}
 .cal-day.loss-day .pnl{color:var(--loss-bright);}
+/* Keep cells from feeling cramped when a trader logs many trades / large P&L; numbers abbreviate (see fmtCalPnl) and the grid holds a floor width on tiny screens instead of squashing. */
+@media(max-width:420px){
+  .cal-grid{grid-template-columns:repeat(7, minmax(38px,1fr));}
+}
 .cal-detail{margin-top:16px;border-top:1px dashed var(--steel);padding-top:14px;}
 
 /* ============ LEADERBOARD ============ */
@@ -907,6 +945,22 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </div>
       <button class="btn-gold" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
       <div class="auth-foot">Access is by invitation only. Your data is private to your account, secured by row-level access control.</div>
+      <div class="auth-divider"><span>or</span></div>
+      <button class="btn-demo" id="startDemoBtn" onclick="startDemo()">Enter the Proving Ground — 7-Day Skill Trial</button>
+      <div class="auth-demo-hint">No invitation needed. Full terminal, sandboxed to this device, resets after 7 days.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DEMO TRIAL EXPIRED MODAL -->
+<div class="overlay" id="demoExpiredOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h3>Your Proving Ground trial has ended</h3>
+    <div class="sub">Your 7 days are up. This is exactly the kind of deadline Ghost Discipline is built to respect.</div>
+    <div class="ok-banner">Your demo data stayed on this device the whole time — nothing was ever sent anywhere. You can wipe it and start a fresh 7-day trial, or step away and come back for real access when you're ready.</div>
+    <div class="btn-row" style="margin-top:16px;gap:10px;display:flex;flex-direction:column;">
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="restartDemo()">Start a new 7-day trial</button>
+      <button class="side-logout" style="width:100%;" onclick="closeModal('demoExpiredOverlay')">Close</button>
     </div>
   </div>
 </div>
@@ -1061,6 +1115,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </button>
     </nav>
     <div class="side-foot">
+      <div class="demo-pill" id="demoPill" style="display:none;">
+        <span>👻 <b>Proving Ground</b> · <span id="demoDaysLeft"></span></span>
+        <button class="demo-exit" onclick="exitDemo()">Exit</button>
+      </div>
       <div class="side-session">
         <span class="dot" id="sessionDot"></span>
         <span id="sessionPillText">Loading session…</span>
@@ -1355,14 +1413,31 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
             <div class="field"><label>Strategy</label><select id="o_strategy" onchange="onOrderStrategyChange()"></select></div>
           </div>
           <div class="row2">
+            <div class="field">
+              <label>Pair / Instrument</label>
+              <input type="text" id="o_pair" list="pairSuggestions" placeholder="e.g. EUR/USD, XAUUSD">
+              <datalist id="pairSuggestions">
+                <option value="EUR/USD"><option value="GBP/USD"><option value="USD/JPY"><option value="USD/CHF">
+                <option value="AUD/USD"><option value="USD/CAD"><option value="NZD/USD"><option value="EUR/JPY">
+                <option value="GBP/JPY"><option value="XAUUSD"><option value="XAGUSD"><option value="BTCUSD">
+                <option value="ETHUSD"><option value="US30"><option value="NAS100"><option value="SPX500">
+                <option value="GER40"><option value="UK100">
+              </datalist>
+            </div>
             <div class="field"><label>Direction</label>
               <select id="o_direction">
                 <option value="buy">Buy / Long</option>
                 <option value="sell">Sell / Short</option>
               </select>
             </div>
-            <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="e.g. 2"></div>
           </div>
+          <div class="row3">
+            <div class="field"><label>Entry price</label><input type="number" step="any" id="o_entry" placeholder="e.g. 1.0850" oninput="updateOrderRRPreview()"></div>
+            <div class="field"><label>Stop loss</label><input type="number" step="any" id="o_sl" placeholder="e.g. 1.0820" oninput="updateOrderRRPreview()"></div>
+            <div class="field"><label>Take profit</label><input type="number" step="any" id="o_tp" placeholder="e.g. 1.0910" oninput="updateOrderRRPreview()"></div>
+          </div>
+          <div class="hint calc" id="orderRRPreview" style="margin-bottom:10px;">Enter entry, stop loss and take profit to auto-calculate planned R:R.</div>
+          <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="auto-calculated, or set your own"></div>
           <div class="field">
             <label>Logic behind this order <span class="hint-inline">tap what applies</span></label>
             <div class="logic-check-grid" id="orderLogicChoices"></div>
@@ -1692,6 +1767,7 @@ const DEFAULT_STATE = {
 };
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let currentUser = null;
+let isDemoMode = false;
 let pendingViolation = false;
 let closingOrderId = null;
 let selectedMood = null;
@@ -1877,6 +1953,7 @@ function showAuthMsg(text, type){
 }
 
 async function handleLogout(){
+  if(isDemoMode){ exitDemo(); return; }
   await sb.auth.signOut();
   currentUser = null;
   state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -1889,6 +1966,7 @@ async function handleLogout(){
   document.getElementById('authScreen').style.display = 'flex';
 }
 async function resetDeviceForNewAccount(){
+  if(isDemoMode){ exitDemo(); return; }
   const hasPending = !!getPendingSave();
   const warning = hasPending
     ? "This device has changes that haven't finished syncing yet. Resetting now will erase them for good, sign you out, and wipe everything saved on this device so a different account can start clean. This can't be undone — continue?"
@@ -1901,6 +1979,7 @@ async function resetDeviceForNewAccount(){
 
 async function onAuthed(user){
   currentUser = user;
+  isDemoMode = false;
   document.getElementById('authScreen').style.display = 'none';
   await flushPendingSave(); // push any offline-queued changes from a prior session first
   await loadOrCreateTraderData();
@@ -1912,6 +1991,83 @@ async function onAuthed(user){
     document.getElementById('appShell').classList.add('show');
     renderAll();
     maybeShowPeriodicReview();
+  }
+  renderDemoStatus();
+}
+
+/* ============ PROVING GROUND: local-only demo trial ============ */
+// A no-invite-needed way to test-drive the terminal. Runs entirely on this device —
+// nothing is sent to Supabase — and self-expires after DEMO_TRIAL_DAYS so it stays a trial, not a loophole.
+const DEMO_TRIAL_DAYS = 7;
+const DEMO_START_KEY = 'ghostDiscipline_demoStart';
+const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
+function demoDaysRemaining(){
+  const startRaw = localStorage.getItem(DEMO_START_KEY);
+  if(!startRaw) return DEMO_TRIAL_DAYS;
+  const elapsedDays = (Date.now() - parseInt(startRaw, 10)) / 86400000;
+  return Math.max(0, Math.ceil(DEMO_TRIAL_DAYS - elapsedDays));
+}
+function isDemoExpired(){
+  return !!localStorage.getItem(DEMO_START_KEY) && demoDaysRemaining() <= 0;
+}
+function saveDemoState(){
+  try{ localStorage.setItem(DEMO_STATE_KEY, JSON.stringify(state)); }catch(e){}
+}
+async function startDemo(){
+  if(isDemoExpired()){
+    document.getElementById('demoExpiredOverlay').classList.add('show');
+    return;
+  }
+  if(!localStorage.getItem(DEMO_START_KEY)) localStorage.setItem(DEMO_START_KEY, String(Date.now()));
+  let saved = null;
+  try{ const raw = localStorage.getItem(DEMO_STATE_KEY); saved = raw ? JSON.parse(raw) : null; }catch(e){ saved = null; }
+  state = saved || JSON.parse(JSON.stringify(DEFAULT_STATE));
+  state.psychology = normalizePsychology(Object.assign({}, DEFAULT_STATE.psychology, state.psychology || {}));
+  currentUser = null;
+  isDemoMode = true;
+  document.getElementById('authScreen').style.display = 'none';
+  rolloverDayIfNeeded();
+  if(!state.rulesCompleted){
+    document.getElementById('gateScreen').classList.add('show');
+  } else {
+    document.getElementById('gateScreen').classList.remove('show');
+    document.getElementById('appShell').classList.add('show');
+    renderAll();
+  }
+  renderDemoStatus();
+  showToast(`Proving Ground started — ${demoDaysRemaining()} days on the clock`);
+}
+function restartDemo(){
+  if(!confirm('This wipes your current demo data and starts a fresh 7-day trial on this device. Continue?')) return;
+  try{ localStorage.removeItem(DEMO_START_KEY); localStorage.removeItem(DEMO_STATE_KEY); }catch(e){}
+  closeModal('demoExpiredOverlay');
+  startDemo();
+}
+function exitDemo(){
+  isDemoMode = false;
+  currentUser = null;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  document.getElementById('appShell').classList.remove('show');
+  document.getElementById('gateScreen').classList.remove('show');
+  document.getElementById('authScreen').style.display = 'flex';
+  renderDemoStatus();
+  showToast('Left the Proving Ground — your trial progress is saved on this device');
+}
+function renderDemoStatus(){
+  const pill = document.getElementById('demoPill');
+  const daysEl = document.getElementById('demoDaysLeft');
+  if(!pill) return;
+  if(isDemoMode){
+    if(isDemoExpired()){
+      exitDemo();
+      document.getElementById('demoExpiredOverlay').classList.add('show');
+      return;
+    }
+    pill.style.display = 'flex';
+    const d = demoDaysRemaining();
+    if(daysEl) daysEl.textContent = d<=1 ? 'last day' : `${d} days left`;
+  } else {
+    pill.style.display = 'none';
   }
 }
 
@@ -1940,26 +2096,31 @@ async function loadOrCreateTraderData(){
   }
 }
 
-function hydrateState(row){
-  state.rules = Object.assign({}, DEFAULT_STATE.rules, row.rules || {});
-  state.propFirm = Object.assign({}, DEFAULT_STATE.propFirm, row.prop_firm || {});
-  state.session = row.session || DEFAULT_STATE.session;
-  state.psychology = Object.assign({}, DEFAULT_STATE.psychology, row.psychology || {});
-  if(!Array.isArray(state.psychology.strategies)) state.psychology.strategies = [];
-  if(!Array.isArray(state.psychology.traders)) state.psychology.traders = [];
-  if(!Array.isArray(state.psychology.orders)) state.psychology.orders = [];
-  if(!Array.isArray(state.psychology.disciplineHistory)) state.psychology.disciplineHistory = [];
-  if(!Array.isArray(state.psychology.preTradeCheckins)) state.psychology.preTradeCheckins = [];
-  state.psychology.reviewsSeen = Object.assign({ weekly:null, monthly:null }, state.psychology.reviewsSeen || {});
-  state.psychology.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
-  if(state.psychology.strategies.length===0){
-    state.psychology.strategies.push({
+// Shared by real accounts (hydrateState) and the local Proving Ground demo (startDemo),
+// so both land on the same sane defaults — a starter trader and a starter strategy — instead of an empty shell.
+function normalizePsychology(psych){
+  if(!Array.isArray(psych.strategies)) psych.strategies = [];
+  if(!Array.isArray(psych.traders)) psych.traders = [];
+  if(!Array.isArray(psych.orders)) psych.orders = [];
+  if(!Array.isArray(psych.disciplineHistory)) psych.disciplineHistory = [];
+  if(!Array.isArray(psych.preTradeCheckins)) psych.preTradeCheckins = [];
+  psych.reviewsSeen = Object.assign({ weekly:null, monthly:null }, psych.reviewsSeen || {});
+  psych.strategies.forEach(s=>{ if(!Array.isArray(s.logics)) s.logics = []; if(!s.type) s.type = null; });
+  if(psych.strategies.length===0){
+    psych.strategies.push({
       id:'st_gmc_default', name:'Ghost Money Concepts', tag:'trend', type:'gmc', risk:null,
       notes:'My core strategy — reading structure and liquidity through swing points, breaks of structure, character changes, order blocks, and hidden supply/demand zones.',
       logics:['swings','bos','choch','orderblock','hiddensupply','hiddendemand']
     });
   }
-  if(state.psychology.traders.length===0) state.psychology.traders = [{id:'me', name:'Me'}];
+  if(psych.traders.length===0) psych.traders = [{id:'me', name:'Me'}];
+  return psych;
+}
+function hydrateState(row){
+  state.rules = Object.assign({}, DEFAULT_STATE.rules, row.rules || {});
+  state.propFirm = Object.assign({}, DEFAULT_STATE.propFirm, row.prop_firm || {});
+  state.session = row.session || DEFAULT_STATE.session;
+  state.psychology = normalizePsychology(Object.assign({}, DEFAULT_STATE.psychology, row.psychology || {}));
   state.trades = row.trades || [];
   state.streak = row.streak || DEFAULT_STATE.streak;
   state.day = row.day || DEFAULT_STATE.day;
@@ -2019,6 +2180,7 @@ function updateSyncIndicator(status){
   label.textContent = m.text;
 }
 async function saveState(){
+  if(isDemoMode){ saveDemoState(); updateSyncIndicator('synced'); return; }
   if(!currentUser) return;
   const payload = buildSavePayload();
   queuePendingSave(payload);
@@ -2473,6 +2635,7 @@ function animateCount(el, from, to, isMoney, decimals){
 
 /* ============ RENDER ============ */
 function renderAll(){
+  renderDemoStatus();
   renderTraderFilterOptions();
   renderDashboard(); renderRulesForm(); renderPropFirmForm(); renderPropFirmCompliance(); renderSessionForm(); renderPsychologyForm(); renderJournal(); updateSessionPill();
   renderPlaybook(); renderDashChart(); renderLeaderboards(); populateTradeSelectors(); renderGauges(); renderDisciplineScore();
@@ -2922,7 +3085,28 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if(wi) wi.addEventListener('input', ()=>{ wi.dataset.touched='1'; });
   const rr = document.getElementById('t_rr');
   if(rr) rr.addEventListener('input', updateTradeRiskPreview);
+  const orr = document.getElementById('o_rr');
+  if(orr) orr.addEventListener('input', ()=>{ orr.dataset.touched='1'; });
 });
+// Entry / stop loss / take profit -> planned R:R, so the order book reads coherently
+// (risk vs. reward is derived from the actual price levels, not typed in blind).
+function updateOrderRRPreview(){
+  const el = document.getElementById('orderRRPreview');
+  const rrInput = document.getElementById('o_rr');
+  const entry = parseFloat(document.getElementById('o_entry').value);
+  const sl = parseFloat(document.getElementById('o_sl').value);
+  const tp = parseFloat(document.getElementById('o_tp').value);
+  if(!el || !rrInput) return;
+  if(isNaN(entry) || isNaN(sl) || isNaN(tp) || entry===sl){
+    el.textContent = 'Enter entry, stop loss and take profit to auto-calculate planned R:R.';
+    return;
+  }
+  const risk = Math.abs(entry - sl);
+  const reward = Math.abs(tp - entry);
+  const rr = reward / risk;
+  el.textContent = `Risk ${risk.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Reward ${reward.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Planned ${rr.toFixed(2)} R`;
+  if(!rrInput.dataset.touched) rrInput.value = rr.toFixed(2);
+}
 
 /* ============ JOURNAL ============ */
 function strategyName(id){ const s = state.psychology.strategies.find(s=>s.id===id); return s?s.name:null; }
@@ -2943,6 +3127,7 @@ function renderJournal(){
           <div class="top">${t.date} ${t.time}</div>
           <div class="bottom">${t.notes ? t.notes : 'No notes'}</div>
           <div class="trade-tags">
+            ${t.pair ? `<span class="tag-chip pair">${escapeHtml(t.pair)}</span>` : ''}
             <span class="tag-chip trader">${escapeHtml(traderName(t.trader))}</span>
             ${t.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>` : ''}
             ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
@@ -3739,7 +3924,9 @@ async function submitTrade(){
   if(state.rules.minRR!=null && rr!=='' && parseFloat(rr) < state.rules.minRR) brokeRuleThisTrade = true;
   if(result==='loss' && state.rules.maxRiskPerTrade!=null && lossAmount > state.rules.maxRiskPerTrade) brokeRuleThisTrade = true;
 
-  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics, mood: selectedMood });
+  const closingOrder = closingOrderId ? state.psychology.orders.find(o=>o.id===closingOrderId) : null;
+  state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics, mood: selectedMood,
+    pair: closingOrder ? closingOrder.pair : null, entry: closingOrder ? closingOrder.entry : null, sl: closingOrder ? closingOrder.sl : null, tp: closingOrder ? closingOrder.tp : null });
   state.day.tradesCount += 1;
   if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; state.psychology.lastLossAt = Date.now(); } else { state.consecutiveLosses = 0; }
   archiveDisciplineDay(state.day.date, computeDisciplineScore());
@@ -3774,17 +3961,28 @@ async function placeOrder(){
   const strategy = document.getElementById('o_strategy').value || null;
   const stratObj = state.psychology.strategies.find(s=>s.id===strategy);
   const strategyType = stratObj ? stratObj.type : null;
+  const pair = document.getElementById('o_pair').value.trim();
   const direction = document.getElementById('o_direction').value;
+  const entry = document.getElementById('o_entry').value;
+  const sl = document.getElementById('o_sl').value;
+  const tp = document.getElementById('o_tp').value;
   const rrPlanned = document.getElementById('o_rr').value;
   const notes = document.getElementById('o_notes').value.trim();
   const logics = getCheckedLogics('orderLogicChoices');
   const now = new Date();
   state.psychology.orders.push({
     id:'ord_'+Date.now(), date:todayStr(), time:now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
-    trader, strategy, strategyType, logics, direction, rrPlanned: rrPlanned || null, notes, status:'pending'
+    trader, strategy, strategyType, logics, pair: pair || null, direction,
+    entry: entry!=='' ? parseFloat(entry) : null, sl: sl!=='' ? parseFloat(sl) : null, tp: tp!=='' ? parseFloat(tp) : null,
+    rrPlanned: rrPlanned || null, notes, status:'pending'
   });
-  document.getElementById('o_rr').value='';
+  document.getElementById('o_pair').value='';
+  document.getElementById('o_entry').value='';
+  document.getElementById('o_sl').value='';
+  document.getElementById('o_tp').value='';
+  document.getElementById('o_rr').value=''; document.getElementById('o_rr').dataset.touched='';
   document.getElementById('o_notes').value='';
+  document.getElementById('orderRRPreview').textContent = 'Enter entry, stop loss and take profit to auto-calculate planned R:R.';
   renderLogicChoices('orderLogicChoices', stratObj ? stratObj.type : null, []);
   await saveState(); renderOrders();
   showToast('Order placed — close it out once you know the result');
@@ -3801,16 +3999,23 @@ function renderOrders(){
   }
   list.innerHTML = orders.map(o=>{
     const typeInfo = STRATEGY_TYPES[o.strategyType];
+    const hasLevels = o.entry!=null || o.sl!=null || o.tp!=null;
     return `
     <div class="order-row">
       <div class="order-row-top">
         <div class="trade-badge pending">${o.direction==='sell'?'SELL':'BUY'}</div>
         <div class="order-row-info">
-          <div class="top">${o.date} · ${o.time}</div>
+          <div class="top">${o.pair ? `<span class="order-pair-badge">${escapeHtml(o.pair)}</span> · ` : ''}${o.date} · ${o.time}</div>
           <div class="bottom">${o.notes ? escapeHtml(o.notes) : 'No notes'}</div>
         </div>
         <button class="btn btn-sm btn-ghost order-cancel-btn" onclick="cancelOrder('${o.id}')" title="Cancel order">✕</button>
       </div>
+      ${hasLevels ? `<div class="order-levels">
+        ${o.entry!=null ? `<span class="lv-entry">Entry <b>${o.entry}</b></span>` : ''}
+        ${o.sl!=null ? `<span class="lv-sl">SL <b>${o.sl}</b></span>` : ''}
+        ${o.tp!=null ? `<span class="lv-tp">TP <b>${o.tp}</b></span>` : ''}
+        ${o.rrPlanned ? `<span class="lv-rr">Planned <b>${o.rrPlanned} R</b></span>` : ''}
+      </div>` : ''}
       <div class="trade-tags">
         <span class="tag-chip trader">${escapeHtml(traderName(o.trader))}</span>
         ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
@@ -3875,6 +4080,18 @@ function fireConfetti(){
 }
 
 /* ============ CALENDAR (with profit) ============ */
+// Keeps calendar cells readable no matter how large a trader's numbers get —
+// abbreviates thousands/millions, full precision is still available via the cell's title tooltip and the day-detail panel.
+function fmtCalPnl(n){
+  const sign = n>=0 ? '+$' : '-$';
+  const abs = Math.abs(n);
+  let body;
+  if(abs >= 1000000) body = (abs/1000000).toFixed(abs>=10000000?0:1).replace(/\.0$/,'')+'M';
+  else if(abs >= 10000) body = (abs/1000).toFixed(0)+'k';
+  else if(abs >= 1000) body = (abs/1000).toFixed(1).replace(/\.0$/,'')+'k';
+  else body = abs.toFixed(0);
+  return sign + body;
+}
 function calShiftMonth(delta){
   calViewDate.setMonth(calViewDate.getMonth()+delta);
   renderCalendar();
@@ -3915,10 +4132,11 @@ function renderCalendar(){
       const tier = disciplineTier(disc.score);
       discDot = `<div class="cal-disc-dot" style="background:${tier.color};box-shadow:0 0 7px ${tier.color}" title="Discipline score: ${disc.score}"></div>`;
     }
-    html += `<div class="${cls}" ${dayTrades.length?`onclick="showCalDay('${iso}')"`:''}>
+    const pnlTitle = dayTrades.length ? `${dayTrades.length} trade${dayTrades.length>1?'s':''} · ${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(2)}` : '';
+    html += `<div class="${cls}" ${dayTrades.length?`onclick="showCalDay('${iso}')"`:''} ${pnlTitle?`title="${pnlTitle}"`:''}>
       ${discDot}
       <div class="n">${day}</div>
-      ${dayTrades.length?`<div class="pnl">${dayPnl>=0?'+$':'-$'}${Math.abs(dayPnl).toFixed(0)}</div>`:''}
+      ${dayTrades.length?`<div class="pnl">${fmtCalPnl(dayPnl)}</div>`:''}
     </div>`;
   }
   grid.innerHTML = html;
@@ -3953,6 +4171,7 @@ function showCalDay(iso){
             <div class="top">${t.time}</div>
             <div class="bottom">${t.notes?t.notes:'No notes'}</div>
             <div class="trade-tags">
+              ${t.pair ? `<span class="tag-chip pair">${escapeHtml(t.pair)}</span>` : ''}
               <span class="tag-chip trader">${escapeHtml(traderName(t.trader))}</span>
               ${t.strategy?`<span class="tag-chip">${escapeHtml(strategyName(t.strategy)||'—')}</span>`:''}
               ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
@@ -4004,6 +4223,11 @@ if('serviceWorker' in navigator){
     } else {
       await onAuthed(data.session.user);
     }
+  } else if(localStorage.getItem(DEMO_START_KEY) && !isDemoExpired()){
+    // Resume an in-progress Proving Ground trial so closing the tab doesn't lose your place.
+    await startDemo();
+  } else if(isDemoExpired()){
+    renderDemoStatus();
   }
 })();
 </script>
