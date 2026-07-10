@@ -288,6 +288,12 @@ a{color:var(--bronze-bright);}
   font-weight:700;letter-spacing:0.05em;background:rgba(212,175,55,0.14);border:1px solid rgba(212,175,55,0.35);
   border-radius:6px;padding:3px 8px;color:var(--gold-bright);
 }
+.demo-top-banner{
+  width:100%;text-align:center;padding:8px 14px;margin-bottom:18px;border-radius:var(--r-sm);
+  font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--gold-ink);background:linear-gradient(90deg,var(--gold-bright),var(--gold));
+  box-shadow:0 8px 22px rgba(212,175,55,0.22);
+}
 /* ============ DEMO / TRIAL MODE ============ */
 .demo-pill{
   display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
@@ -1225,6 +1231,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
   </div>
 
   <main class="main" id="hud">
+    <div class="demo-top-banner" id="demoTopBanner" style="display:none;">👻 Trial — Proving Ground</div>
 
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
@@ -2255,6 +2262,8 @@ function restartDemo(){
 // Visually locks the "premium" nav rooms during a trial and intercepts clicks
 // on them with the tease modal instead of letting the view switch.
 function applyDemoLocks(){
+  const topBanner = document.getElementById('demoTopBanner');
+  if(topBanner) topBanner.style.display = isDemoMode ? 'block' : 'none';
   document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
     const view = btn.dataset.view;
     const locked = isDemoMode && DEMO_LOCKED_VIEWS.includes(view);
@@ -2323,6 +2332,11 @@ function showLockedFeatureTease(view){
 }
 function showLockedFieldTease(label){
   openDemoTease(`${label} is locked in the trial`, `Trial accounts log setups by feel, not by form field — write your ${label.toLowerCase()} straight into Notes for now. It unlocks fully with real access.`);
+}
+// Trial accounts never see a win rate above 50% displayed — real performance
+// tracking (and bragging rights) are reserved for real accounts.
+function capDemoWinRate(pct){
+  return isDemoMode ? Math.min(pct, 50) : pct;
 }
 // One-time wiring: intercept the locked Order Book and Psychology inputs so a
 // click/tap always shows the tease instead of silently doing nothing.
@@ -2694,7 +2708,7 @@ function computePeriodStats(startIso, endIso){
   const moodRows = Object.entries(moodMap).map(([mood,v])=>({ mood, label: MOOD_LABELS[mood]||mood, ...v }))
     .sort((a,b)=>a.pnl-b.pnl);
 
-  return { tradeCount, wins, losses: tradeCount-wins, winRate: tradeCount ? Math.round(wins/tradeCount*100) : 0,
+  return { tradeCount, wins, losses: tradeCount-wins, winRate: tradeCount ? capDemoWinRate(Math.round(wins/tradeCount*100)) : 0,
     pnl, avgRR, bestDay, worstDay, ruleBrokenDays, activeDays: histInRange.length, avgDiscipline, moodRows };
 }
 
@@ -3479,7 +3493,7 @@ function renderJournal(){
   const avgRR = total ? (trades2.reduce((s,t)=>s+(parseFloat(t.rr)||0),0)/total).toFixed(2) : '0';
   const totalPnl = trades2.reduce((s,t)=>s+pnlOf(t),0);
   document.getElementById('j_total').textContent = total;
-  document.getElementById('j_winrate').textContent = total ? Math.round(wins/total*100)+'%' : '0%';
+  document.getElementById('j_winrate').textContent = total ? capDemoWinRate(Math.round(wins/total*100))+'%' : '0%';
   document.getElementById('j_avgrr').textContent = avgRR;
   const pnlEl = document.getElementById('j_totalpnl');
   pnlEl.textContent = (totalPnl>=0?('+'+curSym()):('-'+curSym())) + Math.abs(totalPnl).toFixed(0);
@@ -4477,7 +4491,7 @@ function renderCalendar(){
   document.getElementById('calMonthPnl').textContent = (monthPnl>=0?('+'+curSym()):('-'+curSym()))+Math.abs(monthPnl).toFixed(0);
   document.getElementById('calMonthPnl').style.color = monthPnl>=0 ? 'var(--win-bright)' : 'var(--loss-bright)';
   document.getElementById('calMonthTrades').textContent = monthTrades;
-  document.getElementById('calMonthWinRate').textContent = monthTrades ? Math.round(monthWins/monthTrades*100)+'%' : '0%';
+  document.getElementById('calMonthWinRate').textContent = monthTrades ? capDemoWinRate(Math.round(monthWins/monthTrades*100))+'%' : '0%';
   const avgScoreEl = document.getElementById('calMonthDiscipline');
   if(avgScoreEl) avgScoreEl.textContent = monthScoreCount ? Math.round(monthScoreSum/monthScoreCount) : '—';
   document.getElementById('calDetail').innerHTML = '<div class="empty-state">Tap a day with trades to see the detail.</div>';
