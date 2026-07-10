@@ -258,6 +258,24 @@ a{color:var(--bronze-bright);}
 }
 .btn-demo:hover{border-color:var(--gold);background:rgba(212,175,55,0.08);}
 .auth-demo-hint{font-size:10.5px;color:var(--slate-dim);text-align:center;margin-top:9px;line-height:1.5;}
+/* ============ DEMO LOCK / TEASE ============ */
+.side-navbtn .lock-badge{
+  margin-left:auto;display:flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:8.5px;
+  font-weight:700;letter-spacing:0.06em;color:var(--gold-bright);background:rgba(212,175,55,0.12);
+  border:1px solid rgba(212,175,55,0.35);border-radius:6px;padding:2px 5px;flex-shrink:0;
+}
+.side-navbtn.demo-locked{opacity:0.62;}
+.side-navbtn.demo-locked:hover{opacity:0.85;}
+.demo-tease-icon{font-size:34px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 4px 14px rgba(212,175,55,0.35));}
+.demo-tease-title{font-family:'Fraunces',serif;font-weight:650;font-size:19px;color:var(--platinum);margin-bottom:6px;}
+.demo-tease-copy{font-size:13px;color:var(--slate);line-height:1.6;margin-bottom:18px;}
+.btn-telegram{
+  width:100%;background:linear-gradient(135deg,#2dd4bf,#0ea5e9);color:#04211d;border:none;padding:13px 0;
+  border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:0.02em;
+  cursor:pointer;transition:opacity .15s ease, transform .1s ease;text-align:center;text-decoration:none;display:block;
+  box-shadow:0 5px 0 #0e7490, 0 12px 26px rgba(45,212,191,0.22);
+}
+.btn-telegram:hover{opacity:0.94;transform:translateY(-1px);}
 /* ============ DEMO / TRIAL MODE ============ */
 .demo-pill{
   display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
@@ -946,8 +964,8 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <button class="btn-gold" id="authSubmitBtn" onclick="handleAuthSubmit()">Sign In</button>
       <div class="auth-foot">Access is by invitation only. Your data is private to your account, secured by row-level access control.</div>
       <div class="auth-divider"><span>or</span></div>
-      <button class="btn-demo" id="startDemoBtn" onclick="startDemo()">Enter the Proving Ground — 7-Day Skill Trial</button>
-      <div class="auth-demo-hint">No invitation needed. Full terminal, sandboxed to this device, resets after 7 days.</div>
+      <button class="btn-demo" id="startDemoBtn" onclick="openDemoEmailGate()">Enter the Proving Ground — 7-Day Skill Trial</button>
+      <div class="auth-demo-hint">One trial per trader. A few rooms stay locked until you're in for real.</div>
     </div>
   </div>
 </div>
@@ -957,10 +975,55 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
   <div class="modal" style="max-width:440px;">
     <h3>Your Proving Ground trial has ended</h3>
     <div class="sub">Your 7 days are up. This is exactly the kind of deadline Ghost Discipline is built to respect.</div>
-    <div class="ok-banner">Your demo data stayed on this device the whole time — nothing was ever sent anywhere. You can wipe it and start a fresh 7-day trial, or step away and come back for real access when you're ready.</div>
-    <div class="btn-row" style="margin-top:16px;gap:10px;display:flex;flex-direction:column;">
-      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="restartDemo()">Start a new 7-day trial</button>
+    <div class="ok-banner">Your demo journal stayed on this device the whole time — nothing was sent anywhere. The trial itself is one-per-trader, so it can't be restarted from here, but you can clear your local data or move to real access.</div>
+    <a class="btn-telegram" href="https://t.me/GhostTradersEmpire" target="_blank" rel="noopener" style="margin-bottom:10px;">Unlock Full Access — Telegram</a>
+    <div class="btn-row" style="gap:10px;display:flex;flex-direction:column;">
+      <button class="side-logout" style="width:100%;" onclick="restartDemo()">Clear local demo data</button>
       <button class="side-logout" style="width:100%;" onclick="closeModal('demoExpiredOverlay')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEMO EMAIL GATE (must pass before a trial is granted) -->
+<div class="overlay" id="demoEmailGateOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h3>Enter the Proving Ground</h3>
+    <div class="sub">One email, one trial — this locks in your 7 days so no one else can start over on your behalf.</div>
+    <div class="auth-msg" id="demoGateMsg"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="text" id="demoGateEmail" placeholder="you@domain.com" autocomplete="email">
+    </div>
+    <button class="btn-gold" id="demoGateSubmitBtn" onclick="submitDemoEmailGate()">Start My 7-Day Trial</button>
+    <div class="auth-foot">Your data still stays on this device. The email is only used to enforce one trial per trader — no spam, no marketing.</div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="side-logout" style="width:100%;" onclick="closeModal('demoEmailGateOverlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEMO ALREADY USED (hard block) -->
+<div class="overlay" id="demoBlockedOverlay">
+  <div class="modal" style="max-width:440px;text-align:center;">
+    <div class="demo-tease-icon">🜲</div>
+    <div class="demo-tease-title">You've already run the Proving Ground</div>
+    <div class="demo-tease-copy">This email (or this device) has already used its 7-day trial. Discipline means the rule applies even when it's inconvenient — including to us. If you're serious about the terminal, this is where real access picks up.</div>
+    <a class="btn-telegram" href="https://t.me/GhostTradersEmpire" target="_blank" rel="noopener">Message us on Telegram for full access</a>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="side-logout" style="width:100%;" onclick="closeModal('demoBlockedOverlay')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCKED FEATURE TEASE (shown when a demo trader taps a locked room) -->
+<div class="overlay" id="demoLockedFeatureOverlay">
+  <div class="modal" style="max-width:420px;text-align:center;">
+    <div class="demo-tease-icon">🔒</div>
+    <div class="demo-tease-title" id="demoLockedFeatureTitle">This room is for real accounts</div>
+    <div class="demo-tease-copy" id="demoLockedFeatureCopy">The Proving Ground tests discipline, not the full arsenal. This view unlocks the moment you're in for real.</div>
+    <a class="btn-telegram" href="https://t.me/GhostTradersEmpire" target="_blank" rel="noopener">Unlock Full Access — Telegram</a>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="side-logout" style="width:100%;" onclick="closeModal('demoLockedFeatureOverlay')">Stay in the Proving Ground</button>
     </div>
   </div>
 </div>
@@ -2023,13 +2086,108 @@ async function onAuthed(user){
   renderDemoStatus();
 }
 
-/* ============ PROVING GROUND: local-only demo trial ============ */
-// A no-invite-needed way to test-drive the terminal. Runs entirely on this device —
-// nothing is sent to Supabase — and self-expires after DEMO_TRIAL_DAYS so it stays a trial, not a loophole.
+/* ============ PROVING GROUND: server-gated demo trial ============ */
+// One trial per trader: before any local trial starts, the email + a device
+// fingerprint are checked against Supabase (start_demo_trial RPC) so clearing
+// localStorage, incognito, or a fresh browser profile can't grant a second trial.
+// The trial clock itself (expires_at) also comes from the server, not the
+// device clock, once granted. Trade/journal data still lives only on this
+// device — the server only ever sees the email + fingerprint + expiry.
 const DEMO_TRIAL_DAYS = 7;
 const DEMO_START_KEY = 'ghostDiscipline_demoStart';
+const DEMO_EXPIRES_KEY = 'ghostDiscipline_demoExpires';
+const DEMO_EMAIL_KEY = 'ghostDiscipline_demoEmail';
 const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
+const DEMO_FP_KEY = 'ghostDiscipline_deviceFp';
+// Rooms that stay locked during the trial — full arsenal is reserved for real access.
+const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm'];
+
+// Lightweight, dependency-free device fingerprint (canvas + WebGL + hardware
+// signals hashed together). This raises the bar against casual repeat-trial
+// abuse on the same machine; it is not, and cannot be, a guarantee against a
+// determined person using a different device or a fresh OS profile.
+function getDeviceFingerprint(){
+  try{
+    const cached = localStorage.getItem(DEMO_FP_KEY);
+    if(cached) return cached;
+    const parts = [];
+    parts.push(navigator.userAgent || '');
+    parts.push(navigator.language || '');
+    parts.push(String(navigator.hardwareConcurrency || ''));
+    parts.push(String(screen.width)+'x'+String(screen.height)+'x'+String(screen.colorDepth));
+    parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+    try{
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      ctx.textBaseline = 'top';
+      ctx.font = "14px 'IBM Plex Mono'";
+      ctx.fillText('gmc-fp-🜲-9f3', 2, 2);
+      parts.push(c.toDataURL());
+    }catch(e){}
+    try{
+      const gl = document.createElement('canvas').getContext('webgl');
+      const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+      if(gl && dbg) parts.push(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL));
+    }catch(e){}
+    const raw = parts.join('||');
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for(let i=0;i<raw.length;i++){
+      const ch = raw.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = (h1 ^ (h1>>>16)) >>> 0;
+    h2 = (h2 ^ (h2>>>16)) >>> 0;
+    const fp = h1.toString(16) + h2.toString(16);
+    try{ localStorage.setItem(DEMO_FP_KEY, fp); }catch(e){}
+    return fp;
+  }catch(e){
+    return 'unknown';
+  }
+}
+function openDemoEmailGate(){
+  document.getElementById('demoGateMsg').classList.remove('show');
+  document.getElementById('demoGateEmail').value = '';
+  document.getElementById('demoEmailGateOverlay').classList.add('show');
+}
+async function submitDemoEmailGate(){
+  const email = (document.getElementById('demoGateEmail').value || '').trim();
+  const msg = document.getElementById('demoGateMsg');
+  const btn = document.getElementById('demoGateSubmitBtn');
+  const showMsg = (text, cls)=>{ msg.textContent = text; msg.className = 'auth-msg show ' + cls; };
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    showMsg('Enter a valid email to start your trial.', 'error');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  try{
+    const fp = getDeviceFingerprint();
+    const { data, error } = await sb.rpc('start_demo_trial', { p_email: email, p_device_fp: fp, p_days: DEMO_TRIAL_DAYS });
+    if(error){ showMsg("Couldn't reach the server — check your connection and try again.", 'error'); return; }
+    if(!data || !data.allowed){
+      closeModal('demoEmailGateOverlay');
+      document.getElementById('demoBlockedOverlay').classList.add('show');
+      return;
+    }
+    localStorage.setItem(DEMO_START_KEY, String(Date.now()));
+    localStorage.setItem(DEMO_EXPIRES_KEY, String(new Date(data.expires_at).getTime()));
+    localStorage.setItem(DEMO_EMAIL_KEY, email);
+    closeModal('demoEmailGateOverlay');
+    await startDemo();
+  }catch(e){
+    showMsg("Couldn't reach the server — check your connection and try again.", 'error');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Start My 7-Day Trial';
+  }
+}
 function demoDaysRemaining(){
+  const expiresRaw = localStorage.getItem(DEMO_EXPIRES_KEY);
+  if(expiresRaw){
+    const elapsedDays = (parseInt(expiresRaw,10) - Date.now()) / 86400000;
+    return Math.max(0, Math.ceil(elapsedDays));
+  }
   const startRaw = localStorage.getItem(DEMO_START_KEY);
   if(!startRaw) return DEMO_TRIAL_DAYS;
   const elapsedDays = (Date.now() - parseInt(startRaw, 10)) / 86400000;
@@ -2042,11 +2200,15 @@ function saveDemoState(){
   try{ localStorage.setItem(DEMO_STATE_KEY, JSON.stringify(state)); }catch(e){}
 }
 async function startDemo(){
+  // Guard: nothing has granted a trial yet on this device -> send them through the gate first.
+  if(!localStorage.getItem(DEMO_START_KEY)){
+    openDemoEmailGate();
+    return;
+  }
   if(isDemoExpired()){
     document.getElementById('demoExpiredOverlay').classList.add('show');
     return;
   }
-  if(!localStorage.getItem(DEMO_START_KEY)) localStorage.setItem(DEMO_START_KEY, String(Date.now()));
   let saved = null;
   try{ const raw = localStorage.getItem(DEMO_STATE_KEY); saved = raw ? JSON.parse(raw) : null; }catch(e){ saved = null; }
   state = saved || JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -2063,13 +2225,48 @@ async function startDemo(){
     renderAll();
   }
   renderDemoStatus();
+  applyDemoLocks();
   showToast(`Proving Ground started — ${demoDaysRemaining()} days on the clock`);
 }
+// A fresh trial can only ever be granted once per email/device by the server,
+// so "restart" just wipes the LOCAL journal data — it can't reset the clock.
 function restartDemo(){
-  if(!confirm('This wipes your current demo data and starts a fresh 7-day trial on this device. Continue?')) return;
-  try{ localStorage.removeItem(DEMO_START_KEY); localStorage.removeItem(DEMO_STATE_KEY); }catch(e){}
+  if(!confirm("This wipes your local demo journal data, but your 7-day trial window (tracked server-side) doesn't reset. Continue?")) return;
+  try{ localStorage.removeItem(DEMO_STATE_KEY); }catch(e){}
   closeModal('demoExpiredOverlay');
+  if(isDemoExpired()){
+    document.getElementById('demoBlockedOverlay').classList.add('show');
+    return;
+  }
   startDemo();
+}
+// Visually locks the "premium" nav rooms during a trial and intercepts clicks
+// on them with the tease modal instead of letting the view switch.
+function applyDemoLocks(){
+  document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
+    const view = btn.dataset.view;
+    const locked = isDemoMode && DEMO_LOCKED_VIEWS.includes(view);
+    btn.classList.toggle('demo-locked', locked);
+    let badge = btn.querySelector('.lock-badge');
+    if(locked){
+      if(!badge){
+        badge = document.createElement('span');
+        badge.className = 'lock-badge';
+        badge.textContent = '🔒 PRO';
+        btn.appendChild(badge);
+      }
+    } else if(badge){
+      badge.remove();
+    }
+  });
+}
+function showLockedFeatureTease(view){
+  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm' };
+  const label = labels[view] || 'This room';
+  document.getElementById('demoLockedFeatureTitle').textContent = `${label} is for real accounts`;
+  document.getElementById('demoLockedFeatureCopy').textContent =
+    `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`;
+  document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function exitDemo(){
   isDemoMode = false;
@@ -2079,6 +2276,7 @@ function exitDemo(){
   document.getElementById('gateScreen').classList.remove('show');
   document.getElementById('authScreen').style.display = 'flex';
   renderDemoStatus();
+  applyDemoLocks();
   showToast('Left the Proving Ground — your trial progress is saved on this device');
 }
 function renderDemoStatus(){
@@ -2548,6 +2746,11 @@ function numOrNullFrom(id){
 /* ============ NAV (left sidebar) ============ */
 document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
+    if(isDemoMode && DEMO_LOCKED_VIEWS.includes(btn.dataset.view)){
+      showLockedFeatureTease(btn.dataset.view);
+      toggleSidebar(false);
+      return;
+    }
     document.querySelectorAll('.side-navbtn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     btn.classList.add('active');
