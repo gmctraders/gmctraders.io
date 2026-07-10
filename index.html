@@ -2043,6 +2043,8 @@ function scheduleSaveRetry(){
 }
 window.addEventListener('online', ()=>{ showToast('Back online — syncing…'); flushPendingSave(); });
 window.addEventListener('offline', ()=>{ updateSyncIndicator('offline'); });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && currentUser) flushPendingSave(); });
+window.addEventListener('pageshow', ()=>{ if(currentUser) flushPendingSave(); });
 
 /* ============ SYNC CONFLICT RESOLUTION ============ */
 function openSyncConflict(pending){
