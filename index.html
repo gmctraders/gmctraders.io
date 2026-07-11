@@ -1906,7 +1906,11 @@ const STRATEGY_TYPES = {
     {id:'choch', label:'Change of Character (CHoCH)'},
     {id:'orderblock', label:'Order Block'},
     {id:'hiddensupply', label:'Hidden Supply Zone'},
-    {id:'hiddendemand', label:'Hidden Demand Zone'}
+    {id:'hiddendemand', label:'Hidden Demand Zone'},
+    {id:'eqhigh', label:'Equal High'},
+    {id:'eqlow', label:'Equal Low'},
+    {id:'imbalance', label:'Imbalance'},
+    {id:'fibonacci', label:'Fibonacci Retracement'}
   ]},
   smc: { label:'Smart Money Concepts (SMC)', short:'SMC', color:'#2dd4bf', logics:[
     {id:'liquiditygrab', label:'Liquidity Grab'},
@@ -2120,7 +2124,7 @@ const DEMO_EMAIL_KEY = 'ghostDiscipline_demoEmail';
 const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
 const DEMO_FP_KEY = 'ghostDiscipline_deviceFp';
 // Rooms that stay locked during the trial — full arsenal is reserved for real access.
-const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm'];
+const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal'];
 
 // Lightweight, dependency-free device fingerprint (canvas + WebGL + hardware
 // signals hashed together). This raises the bar against casual repeat-trial
@@ -2268,7 +2272,27 @@ function restartDemo(){
 }
 // Visually locks the "premium" nav rooms during a trial and intercepts clicks
 // on them with the tease modal instead of letting the view switch.
+// Every Proving Ground account trades a fixed $1,000 USD demo balance — this
+// keeps trial numbers comparable and removes a field that isn't the point of
+// the trial. Called any time demo locks are (re)applied.
+function enforceDemoAccountDefaults(){
+  if(!isDemoMode) return;
+  state.rules.currency = 'USD';
+  state.rules.accountBalance = 1000;
+}
+function lockDemoAccountFields(){
+  ['g_currency','g_accountBalance','r_currency','r_accountBalance'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(isDemoMode){ el.value = id.includes('currency') ? 'USD' : 1000; }
+    const field = el.closest('.field');
+    if(field) field.classList.toggle('field-locked', isDemoMode);
+  });
+  updateCurrencyLabels();
+}
 function applyDemoLocks(){
+  enforceDemoAccountDefaults();
+  lockDemoAccountFields();
   const topBanner = document.getElementById('demoTopBanner');
   if(topBanner) topBanner.style.display = isDemoMode ? 'block' : 'none';
   document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
@@ -2333,12 +2357,12 @@ function openDemoTease(title, copy){
   document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function showLockedFeatureTease(view){
-  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm' };
+  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal' };
   const label = labels[view] || 'This room';
   openDemoTease(`${label} is for real accounts`, `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`);
 }
-function showLockedFieldTease(label){
-  openDemoTease(`${label} is locked in the trial`, `Trial accounts log setups by feel, not by form field — write your ${label.toLowerCase()} straight into Notes for now. It unlocks fully with real access.`);
+function showLockedFieldTease(label, customCopy){
+  openDemoTease(`${label} is locked in the trial`, customCopy || `Trial accounts log setups by feel, not by form field — write your ${label.toLowerCase()} straight into Notes for now. It unlocks fully with real access.`);
 }
 // Trial accounts never see a win rate above 50% displayed — real performance
 // tracking (and bragging rights) are reserved for real accounts.
@@ -2354,20 +2378,25 @@ function capDemoDisciplineScore(score){
 // One-time wiring: intercept the locked Order Book and Psychology inputs so a
 // click/tap always shows the tease instead of silently doing nothing.
 function setupDemoFieldGuards(){
+  const accountLockCopy = 'Every Proving Ground account trades a fixed $1,000 USD demo balance — this keeps every trial trader\'s numbers comparable. It unlocks fully with real access.';
   const guarded = [
     { id:'o_pair', label:'Pair / Instrument' },
     { id:'o_sl', label:'Stop Loss' },
     { id:'o_tp', label:'Take Profit' },
-    { id:'p_monk', label:'Monk Code' }
+    { id:'p_monk', label:'Monk Code' },
+    { id:'g_currency', label:'Account currency', msg:accountLockCopy },
+    { id:'g_accountBalance', label:'Account balance', msg:accountLockCopy },
+    { id:'r_currency', label:'Account currency', msg:accountLockCopy },
+    { id:'r_accountBalance', label:'Account balance', msg:accountLockCopy }
   ];
-  guarded.forEach(({id,label})=>{
+  guarded.forEach(({id,label,msg})=>{
     const el = document.getElementById(id);
     if(!el) return;
     el.addEventListener('mousedown', (e)=>{
       if(!isDemoMode) return;
       e.preventDefault();
       el.blur();
-      showLockedFieldTease(label);
+      showLockedFieldTease(label, msg);
     });
     el.addEventListener('keydown', (e)=>{ if(isDemoMode) e.preventDefault(); });
   });
@@ -2460,8 +2489,8 @@ function normalizePsychology(psych){
   if(psych.strategies.length===0){
     psych.strategies.push({
       id:'st_gmc_default', name:'Ghost Money Concepts', tag:'trend', type:'gmc', risk:null,
-      notes:'My core strategy — reading structure and liquidity through swing points, breaks of structure, character changes, order blocks, and hidden supply/demand zones.',
-      logics:['swings','bos','choch','orderblock','hiddensupply','hiddendemand']
+      notes:'My core strategy — reading structure and liquidity through swing points, breaks of structure, character changes, order blocks, hidden supply/demand zones, equal highs/lows, imbalances, and Fibonacci retracements.',
+      logics:['swings','bos','choch','orderblock','hiddensupply','hiddendemand','eqhigh','eqlow','imbalance','fibonacci']
     });
   }
   if(psych.traders.length===0) psych.traders = [{id:'me', name:'Me'}];
@@ -2855,6 +2884,7 @@ async function submitGateRules(){
   vals.coolingOffMinutes = numOrNullFrom('g_coolingOff');
   vals.maxRiskPerTrade = numOrNullFrom('g_maxRiskPerTrade');
   vals.currency = document.getElementById('g_currency').value || 'USD';
+  if(isDemoMode){ vals.currency = 'USD'; vals.accountBalance = 1000; }
   state.rules = vals;
   state.rulesCompleted = true;
   await saveState();
@@ -3050,8 +3080,10 @@ function renderDashboard(){
   document.getElementById('monkPreview').textContent = state.psychology.monk?.trim() ? state.psychology.monk : 'No principles written yet.';
 }
 function renderRulesForm(){
+  enforceDemoAccountDefaults();
   document.getElementById('r_currency').value = state.rules.currency || 'USD';
   document.getElementById('r_accountBalance').value = state.rules.accountBalance ?? '';
+  lockDemoAccountFields();
   document.getElementById('r_maxDailyLoss').value = state.rules.maxDailyLoss ?? '';
   document.getElementById('r_maxTrades').value = state.rules.maxTrades ?? '';
   document.getElementById('r_riskPerTrade').value = state.rules.riskPerTrade ?? '';
@@ -3074,6 +3106,7 @@ async function saveRules(){
     coolingOffMinutes: numOrNullFrom('r_coolingOff'),
     maxRiskPerTrade: numOrNullFrom('r_maxRiskPerTrade'),
   };
+  if(isDemoMode){ state.rules.currency = 'USD'; state.rules.accountBalance = 1000; }
   await saveState(); renderDashboard(); renderGauges(); updateCurrencyLabels();
   showToast('Rules saved');
 }
@@ -4282,6 +4315,10 @@ function checkPretradeConfirmText(){
 }
 
 function logPretradeCheckin(overridden){
+  // Proving Ground trials keep the pre-trade discipline check itself active,
+  // but never write to emotional check-in history — that record stays
+  // locked/unwritten until the trader is on a real account.
+  if(isDemoMode) return;
   const hist = state.psychology.preTradeCheckins;
   hist.push({ date: todayStr(), time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), mood: pretradeMood, violated: pretradeViolatedCache, overridden: !!overridden });
   if(hist.length>500) hist.splice(0, hist.length-500);
