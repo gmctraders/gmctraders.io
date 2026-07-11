@@ -1284,7 +1284,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       </div>
 
       <div class="card tilt score-card" style="margin-top:18px">
-        <h2>Discipline <span class="accent">Score</span><span class="eyebrow">how closely you're following your own rules, on a 0–100 scale</span></h2>
+        <h2>Discipline <span class="accent">Score</span><span class="eyebrow" id="scoreEyebrow">how closely you're following your own rules, on a 0–100 scale</span></h2>
         <div class="score-dial-wrap">
           <div class="score-dial" id="scoreDial"></div>
           <div class="score-dial-info">
@@ -4042,13 +4042,26 @@ function scoreDialSVG(score){
 function renderDisciplineScore(){
   const dial = document.getElementById('scoreDial');
   if(!dial || !state.day.date) return;
-  const score = computeDisciplineScore();
+  const rawScore = computeDisciplineScore();
+  const score = capDemoDisciplineScore(rawScore);
   dial.innerHTML = scoreDialSVG(score);
-  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreNum').textContent = isDemoMode ? `${score}/50` : score;
   const tier = disciplineTier(score);
   const tierEl = document.getElementById('scoreTier');
   tierEl.textContent = tier.label;
   tierEl.style.color = tier.color;
+  const descEl = document.getElementById('scoreDesc');
+  if(descEl){
+    descEl.textContent = isDemoMode
+      ? 'Trial discipline scores are capped at 50/50 — the full 0–100 scale unlocks with real access. Still recalculated live from your loss limits, trade caps, session window, and cooling-off rule.'
+      : 'This score is recalculated live from your loss limits, trade caps, session window, and cooling-off rule — then imputed into the calendar as your daily discipline history.';
+  }
+  const eyebrowEl = document.getElementById('scoreEyebrow');
+  if(eyebrowEl){
+    eyebrowEl.textContent = isDemoMode
+      ? 'how closely you\'re following your own rules — capped at 0–50 in the trial'
+      : 'how closely you\'re following your own rules, on a 0–100 scale';
+  }
 }
 
 /* ============ RISK GAUGES (brass instrument dials) ============ */
