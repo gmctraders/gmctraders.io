@@ -1006,14 +1006,14 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 <div class="overlay" id="demoEmailGateOverlay">
   <div class="modal" style="max-width:440px;">
     <h3>Enter the Proving Ground</h3>
-    <div class="sub">One email, one trial — this locks in your 7 days so no one else can start over on your behalf.</div>
+    <div class="sub">One trader, one trial — this locks in your 7 days so no one else can start over on your behalf.</div>
     <div class="auth-msg" id="demoGateMsg"></div>
     <div class="auth-field">
       <label>Email</label>
       <input type="text" id="demoGateEmail" placeholder="you@domain.com" autocomplete="email">
     </div>
     <button class="btn-gold" id="demoGateSubmitBtn" onclick="submitDemoEmailGate()">Start My 7-Day Trial</button>
-    <div class="auth-foot">Your data still stays on this device. The email is only used to enforce one trial per trader — no spam, no marketing.</div>
+    <div class="auth-foot">Your journal data still stays on this device. The email is only used to enforce one trial per trader — no spam, no marketing.</div>
     <div class="btn-row" style="margin-top:10px;">
       <button class="side-logout" style="width:100%;" onclick="closeModal('demoEmailGateOverlay')">Cancel</button>
     </div>
@@ -1446,6 +1446,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="stat" style="flex:none;min-width:110px"><b id="calMonthWinRate">0%</b><span>Win rate</span></div>
           <div class="stat" style="flex:none;min-width:110px"><b id="calMonthDiscipline">—</b><span>Avg. discipline</span></div>
         </div>
+        <div id="calDisciplineNote" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate);margin:-6px 0 10px;">Trial discipline scores are capped at 50/50 — the full 0–100 scale unlocks with real access.</div>
         <div class="cal-grid" id="calGrid"></div>
         <div class="cal-detail" id="calDetail"><div class="empty-state">Tap a day with trades to see the detail.</div></div>
       </div>
@@ -1699,7 +1700,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           </div>
           <button class="btn btn-primary" onclick="saveSession()">Save Session</button>
         </div>
-        <div class="card tilt">
+        <div class="card tilt" id="liveClockCard">
           <h2>Live <span class="accent">Clock</span></h2>
           <div class="clock-big" id="liveClock">--:--:--</div>
           <div class="clock-sub" id="liveClockSub">checking session…</div>
@@ -2215,6 +2216,12 @@ function demoDaysRemaining(){
 function isDemoExpired(){
   return !!localStorage.getItem(DEMO_START_KEY) && demoDaysRemaining() <= 0;
 }
+// Admin/owner trials come back from start_demo_trial with a ~50-year expires_at
+// instead of the normal 7 days. Anything with over a year left is treated as
+// admin — this reads the real server-issued expiry, it doesn't hardcode an email.
+function isDemoAdmin(){
+  return demoDaysRemaining() > 365;
+}
 function saveDemoState(){
   try{ localStorage.setItem(DEMO_STATE_KEY, JSON.stringify(state)); }catch(e){}
 }
@@ -2245,7 +2252,7 @@ async function startDemo(){
   }
   renderDemoStatus();
   applyDemoLocks();
-  showToast(`Proving Ground started — ${demoDaysRemaining()} days on the clock`);
+  showToast(isDemoAdmin() ? 'Admin logged in — unlimited access' : `Proving Ground started — ${demoDaysRemaining()} days on the clock`);
 }
 // A fresh trial can only ever be granted once per email/device by the server,
 // so "restart" just wipes the LOCAL journal data — it can't reset the clock.
@@ -2338,6 +2345,12 @@ function showLockedFieldTease(label){
 function capDemoWinRate(pct){
   return isDemoMode ? Math.min(pct, 50) : pct;
 }
+// Trial accounts never see a discipline average above 50 (out of 50) — the
+// full 0–100 scale, and the "unlocked" tier language that goes with it, is
+// reserved for real accounts.
+function capDemoDisciplineScore(score){
+  return isDemoMode ? Math.min(score, 50) : score;
+}
 // One-time wiring: intercept the locked Order Book and Psychology inputs so a
 // click/tap always shows the tease instead of silently doing nothing.
 function setupDemoFieldGuards(){
@@ -2398,8 +2411,12 @@ function renderDemoStatus(){
       return;
     }
     pill.style.display = 'flex';
-    const d = demoDaysRemaining();
-    if(daysEl) daysEl.textContent = d<=1 ? 'last day' : `${d} days left`;
+    if(isDemoAdmin()){
+      if(daysEl) daysEl.textContent = 'ADMIN — unlimited';
+    } else {
+      const d = demoDaysRemaining();
+      if(daysEl) daysEl.textContent = d<=1 ? 'last day' : `${d} days left`;
+    }
   } else {
     pill.style.display = 'none';
   }
@@ -4111,14 +4128,45 @@ function isInSession(){
   if(start<=end) return cur>=start && cur<=end;
   return cur>=start || cur<=end;
 }
+// Which global forex sessions are open right now, based on standard UTC
+// session hours. Sydney/Tokyo/London/New York cover the full 24h with
+// overlaps, so this always returns at least one name.
+function getActiveMarketSessions(){
+  const h = new Date().getUTCHours();
+  const sessions = [];
+  if(h>=22 || h<7) sessions.push('Sydney');
+  if(h>=0 && h<9) sessions.push('Tokyo');
+  if(h>=8 && h<17) sessions.push('London');
+  if(h>=13 && h<22) sessions.push('New York');
+  return sessions;
+}
 function updateSessionPill(){
-  if(!currentUser) return;
+  if(!currentUser && !isDemoMode) return;
   const inSession = isInSession();
-  document.getElementById('sessionDot').className = 'dot ' + (inSession ? 'live':'closed');
-  document.getElementById('sessionPillText').textContent = (inSession ? 'In session · ' : 'Outside · ') + state.session.start + '–' + state.session.end;
-  const lc = document.getElementById('liveClock'); if(lc) lc.textContent = new Date().toLocaleTimeString();
+  const dot = document.getElementById('sessionDot');
+  const pillText = document.getElementById('sessionPillText');
+  const lc = document.getElementById('liveClock');
   const lcs = document.getElementById('liveClockSub');
-  if(lcs) lcs.textContent = inSession ? 'Inside your defined trading window' : (state.session.restrict ? 'Outside window — trading is restricted' : 'Outside window — restriction is off');
+  const clockCard = document.getElementById('liveClockCard');
+  if(isDemoMode){
+    // Session names and the live market clock are a real-account feature.
+    if(dot) dot.className = 'dot closed';
+    if(pillText) pillText.textContent = 'Unlock session names & time';
+    if(lc) lc.textContent = '—:—:—';
+    if(lcs) lcs.textContent = 'Unlock session names & time with real access';
+    if(clockCard){
+      clockCard.style.cursor = 'pointer';
+      clockCard.onclick = ()=> openDemoTease('Session names & time are for real accounts', 'The Proving Ground hides which market sessions are live and the exact time — both unlock the moment you\'re in for real.');
+    }
+    return;
+  }
+  if(clockCard){ clockCard.style.cursor = 'default'; clockCard.onclick = null; }
+  const activeSessions = getActiveMarketSessions();
+  const sessionNames = activeSessions.length ? ' · ' + activeSessions.join(', ') : '';
+  if(dot) dot.className = 'dot ' + (inSession ? 'live':'closed');
+  if(pillText) pillText.textContent = (inSession ? 'In session · ' : 'Outside · ') + state.session.start + '–' + state.session.end + sessionNames;
+  if(lc) lc.textContent = new Date().toLocaleTimeString();
+  if(lcs) lcs.textContent = (inSession ? 'Inside your defined trading window' : (state.session.restrict ? 'Outside window — trading is restricted' : 'Outside window — restriction is off')) + (activeSessions.length ? ' · Active: ' + activeSessions.join(', ') : '');
 }
 setInterval(()=>{ updateSessionPill(); if(currentUser && state.rules.coolingOffMinutes!=null) renderGauges(); }, 1000);
 
@@ -4481,7 +4529,7 @@ function renderCalendar(){
       discDot = `<div class="cal-disc-dot" style="background:${tier.color};box-shadow:0 0 7px ${tier.color}" title="Discipline score: ${disc.score}"></div>`;
     }
     const pnlTitle = dayTrades.length ? `${dayTrades.length} trade${dayTrades.length>1?'s':''} · ${dayPnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(dayPnl).toFixed(2)}` : '';
-    html += `<div class="${cls}" ${dayTrades.length?`onclick="showCalDay('${iso}')"`:''} ${pnlTitle?`title="${pnlTitle}"`:''}>
+    html += `<div class="${cls}" ${dayTrades.length?`onclick="handleCalDayTap('${iso}')"`:''} ${pnlTitle?`title="${pnlTitle}"`:''}>
       ${discDot}
       <div class="n">${day}</div>
       ${dayTrades.length?`<div class="pnl">${fmtCalPnl(dayPnl)}</div>`:''}
@@ -4493,8 +4541,24 @@ function renderCalendar(){
   document.getElementById('calMonthTrades').textContent = monthTrades;
   document.getElementById('calMonthWinRate').textContent = monthTrades ? capDemoWinRate(Math.round(monthWins/monthTrades*100))+'%' : '0%';
   const avgScoreEl = document.getElementById('calMonthDiscipline');
-  if(avgScoreEl) avgScoreEl.textContent = monthScoreCount ? Math.round(monthScoreSum/monthScoreCount) : '—';
+  if(avgScoreEl){
+    if(monthScoreCount){
+      const rawAvg = Math.round(monthScoreSum/monthScoreCount);
+      avgScoreEl.textContent = isDemoMode ? `${capDemoDisciplineScore(rawAvg)}/50` : rawAvg;
+    } else {
+      avgScoreEl.textContent = '—';
+    }
+  }
+  const discNoteEl = document.getElementById('calDisciplineNote');
+  if(discNoteEl) discNoteEl.style.display = isDemoMode ? 'block' : 'none';
   document.getElementById('calDetail').innerHTML = '<div class="empty-state">Tap a day with trades to see the detail.</div>';
+}
+function handleCalDayTap(iso){
+  if(isDemoMode){
+    openDemoTease('Day detail is for real accounts', 'The Proving Ground shows your monthly shape, not a trade-by-trade replay of each day — that unlocks the moment you\'re in for real.');
+    return;
+  }
+  showCalDay(iso);
 }
 function showCalDay(iso){
   const trades = filteredTrades().filter(t=>t.date===iso);
