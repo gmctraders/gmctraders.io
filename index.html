@@ -2182,7 +2182,7 @@ const DEMO_EMAIL_KEY = 'ghostDiscipline_demoEmail';
 const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
 const DEMO_FP_KEY = 'ghostDiscipline_deviceFp';
 // Rooms that stay locked during the trial — full arsenal is reserved for real access.
-const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal','about'];
+const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal','about','rules'];
 
 // Lightweight, dependency-free device fingerprint (canvas + WebGL + hardware
 // signals hashed together). This raises the bar against casual repeat-trial
@@ -2415,7 +2415,7 @@ function openDemoTease(title, copy){
   document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function showLockedFeatureTease(view){
-  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal', about:'About & Reset' };
+  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal', about:'About & Reset', rules:'Rule Builder' };
   const label = labels[view] || 'This room';
   openDemoTease(`${label} is for real accounts`, `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`);
 }
@@ -3101,6 +3101,10 @@ const RULE_PRESETS = {
   aggressive:   { label:'Aggressive',   riskPct:2,   maxTrades:6, minRR:1.2, maxConsecLosses:4, coolingOffHours:0.5, dailyLossMultiplier:4 }
 };
 function applyRulePreset(prefix, key){
+  if(prefix==='r_' && isDemoMode){
+    showLockedFeatureTease('rules');
+    return;
+  }
   const p = RULE_PRESETS[key];
   if(!p) return;
   const set = (suffix, val) => { const el = document.getElementById(prefix+suffix); if(el) el.value = val; };
