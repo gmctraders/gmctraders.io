@@ -2942,15 +2942,9 @@ function numOrNullFrom(id){
   return v === '' ? null : parseFloat(v);
 }
 
-/* ============ CLEAR DATA (reset code gated) ============ */
-// The admin reset code is never stored as plain text in the source - only its
-// SHA-256 hash lives here, so it isn't visible via view-source / inspect.
-const RESET_CODE_HASH = "d87c4581fc345b94449702d0ed8e954adaaa07ee86417decdf0a07fad4b9d4dd";
-async function sha256Hex(str){
-  const buf = new TextEncoder().encode(str);
-  const digest = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
+/* ============ CLEAR DATA (reset code gated via Supabase RPC) ============ */
+// The actual code check + wipe now happens server-side in the reset_trader_data
+// Postgres function, so the code never lives in the browser at all.
 function handleClearDataClick(){
   if(isDemoMode){
     openDemoTease('Clear Data is for real accounts', 'The Proving Ground resets itself automatically when your trial ends - this tool is reserved for live accounts.');
@@ -2972,8 +2966,13 @@ async function submitResetCode(){
     err.style.display = 'block';
     return;
   }
-  const hash = await sha256Hex(val);
-  if(hash !== RESET_CODE_HASH){
+  const { data, error } = await sb.rpc('reset_trader_data', { p_code: val });
+  if(error){
+    err.textContent = error.message && error.message.includes('Too many') ? 'Too many attempts. Try again in 15 minutes.' : 'Something went wrong. Try again.';
+    err.style.display = 'block';
+    return;
+  }
+  if(!data){
     err.textContent = 'Incorrect code. Try again.';
     err.style.display = 'block';
     input.value = '';
@@ -2982,21 +2981,7 @@ async function submitResetCode(){
   }
   closeModal('resetCodeOverlay');
   if(!confirm('This will permanently erase every trade, rule and journal entry on this account. This cannot be undone. Continue?')) return;
-  await clearAllData();
-}
-async function clearAllData(){
-  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  ['g_accountBalance','g_maxDailyLoss','g_maxTrades','g_minRR','g_maxConsecLosses','g_coolingOff','g_maxRiskPerTrade'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value = '';
-  });
-  const gCur = document.getElementById('g_currency');
-  if(gCur) gCur.value = 'USD';
-  const gHint = document.getElementById('gateHint');
-  if(gHint) gHint.textContent = '';
-  const gPreview = document.getElementById('gateRiskPreview');
-  if(gPreview) gPreview.textContent = '';
-  await saveState();
+  await loadOrCreateTraderData();
   showToast('Data cleared. Set up your rules again.');
   document.getElementById('appShell').classList.remove('show');
   document.getElementById('gateScreen').classList.add('show');
