@@ -1089,7 +1089,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
     <div class="gate-card">
       <div class="field">
         <label>Account currency</label>
-        <select id="g_currency" onchange="updateCurrencyLabels()"></select>
+        <select id="g_currency" onchange="handleCurrencyChange(this)"></select>
         <div class="hint" style="margin-top:6px;">Every dollar amount in the app — risk, P&amp;L, calendar, journal — will be shown in this currency. Defaults to USD.</div>
       </div>
       <div class="row2">
@@ -1194,6 +1194,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <button class="side-navbtn" data-view="psychology">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-9.5-8.8C1 8.5 3 5 6.5 5c2 0 3.3 1.1 5.5 3 2.2-1.9 3.5-3 5.5-3C21 5 23 8.5 21.5 12.2 19 16.65 12 21 12 21z"/></svg>
         Psychology
+      </button>
+      <button class="side-navbtn" data-view="about">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+        About &amp; Reset
       </button>
       <button class="side-navbtn" id="getAppBtn" onclick="handleGetApp()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M9 18h6"/><path d="M12 6v6l3 2"/></svg>
@@ -1606,7 +1610,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <div class="card tilt">
         <div class="field">
           <label>Account currency</label>
-          <select id="r_currency" onchange="updateCurrencyLabels()"></select>
+          <select id="r_currency" onchange="handleCurrencyChange(this)"></select>
         </div>
         <div class="row2">
           <div class="field"><label>Account balance (<span class="cur-sym">$</span>)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="updateRulesRiskPreview()"></div>
@@ -1729,6 +1733,32 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <textarea id="p_monk" style="min-height:160px" placeholder="1. I do not chase price.&#10;2. I only enter at my defined zone."></textarea>
         </div>
         <button class="btn btn-primary" onclick="savePsychology()">Save</button>
+      </div>
+    </div>
+
+    <!-- ABOUT & RESET -->
+    <div class="view" id="view-about">
+      <div class="topbar-row">
+        <div>
+          <h2 class="page-title">About &amp; Reset</h2>
+          <div class="page-sub">What Ghost Discipline is actually for &mdash; and how to start clean.</div>
+        </div>
+      </div>
+      <div class="card tilt">
+        <h2>What This <span class="accent">Journal</span> Is For</h2>
+        <p style="color:var(--slate);line-height:1.7;margin:0;">
+          Ghost Discipline exists to make you accountable to the rules you set for yourself before emotion gets a vote. Every trade you log, every rule you break or hold, and every check-in you complete feeds a single outcome: honest proof of whether you traded the plan, or just traded the moment.
+        </p>
+        <p style="color:var(--slate);line-height:1.7;margin:10px 0 0;">
+          Over weeks and months this becomes a record you can't argue with &mdash; your discipline score, your rule violations, your real win rate under your own rules. It isn't here to flatter you. It's here to keep score honestly, so the next version of you trades better than the last.
+        </p>
+      </div>
+      <div class="card tilt" style="margin-top:18px;border-color:rgba(244,63,94,0.3);">
+        <h2 style="color:var(--loss-bright)">Danger Zone</h2>
+        <p style="color:var(--slate);line-height:1.7;margin:0;">
+          Starting over on a new live account? <b>Clear Data</b> permanently wipes every trade, rule, streak, discipline history and journal entry on this account and sends you back to Rule Builder to set up clean. This cannot be undone, and it requires a reset code from your admin.
+        </p>
+        <button class="btn btn-danger" style="margin-top:14px;" onclick="handleClearDataClick()">Clear Data</button>
       </div>
     </div>
 
@@ -1897,6 +1927,20 @@ const CURRENCY_OPTIONS_HTML = Object.entries(CURRENCIES).map(([code,c])=>
   `<option value="${code}">${c.symbol} — ${c.name} (${code})</option>`).join('');
 function curSym(){ return (CURRENCIES[state.rules.currency] || CURRENCIES.USD).symbol; }
 function updateCurrencyLabels(){ document.querySelectorAll('.cur-sym').forEach(el=>el.textContent=curSym()); }
+// Fired the instant either currency dropdown changes, so every $ label and the
+// "at risk per trade" previews reflect the new currency immediately, without
+// waiting for a form save. Both dropdowns are kept in sync since there's only
+// one account currency in state.
+function handleCurrencyChange(sel){
+  state.rules.currency = sel.value;
+  const gCur = document.getElementById('g_currency');
+  const rCur = document.getElementById('r_currency');
+  if(gCur && gCur!==sel) gCur.value = sel.value;
+  if(rCur && rCur!==sel) rCur.value = sel.value;
+  updateCurrencyLabels();
+  updateGateRiskPreview();
+  updateRulesRiskPreview();
+}
 
 /* ============ STRATEGY TYPES & LOGIC LIBRARY ============ */
 const STRATEGY_TYPES = {
@@ -2124,7 +2168,7 @@ const DEMO_EMAIL_KEY = 'ghostDiscipline_demoEmail';
 const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
 const DEMO_FP_KEY = 'ghostDiscipline_deviceFp';
 // Rooms that stay locked during the trial — full arsenal is reserved for real access.
-const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal'];
+const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal','about'];
 
 // Lightweight, dependency-free device fingerprint (canvas + WebGL + hardware
 // signals hashed together). This raises the bar against casual repeat-trial
@@ -2357,7 +2401,7 @@ function openDemoTease(title, copy){
   document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function showLockedFeatureTease(view){
-  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal' };
+  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal', about:'About & Reset' };
   const label = labels[view] || 'This room';
   openDemoTease(`${label} is for real accounts`, `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`);
 }
@@ -2898,6 +2942,66 @@ function numOrNullFrom(id){
   return v === '' ? null : parseFloat(v);
 }
 
+/* ============ CLEAR DATA (reset code gated) ============ */
+// The admin reset code is never stored as plain text in the source - only its
+// SHA-256 hash lives here, so it isn't visible via view-source / inspect.
+const RESET_CODE_HASH = "d87c4581fc345b94449702d0ed8e954adaaa07ee86417decdf0a07fad4b9d4dd";
+async function sha256Hex(str){
+  const buf = new TextEncoder().encode(str);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function handleClearDataClick(){
+  if(isDemoMode){
+    openDemoTease('Clear Data is for real accounts', 'The Proving Ground resets itself automatically when your trial ends - this tool is reserved for live accounts.');
+    return;
+  }
+  const input = document.getElementById('resetCodeInput');
+  const err = document.getElementById('resetCodeError');
+  if(input) input.value = '';
+  if(err) err.style.display = 'none';
+  document.getElementById('resetCodeOverlay').classList.add('show');
+  setTimeout(()=>input && input.focus(), 50);
+}
+async function submitResetCode(){
+  const input = document.getElementById('resetCodeInput');
+  const err = document.getElementById('resetCodeError');
+  const val = (input.value || '').trim();
+  if(!val){
+    err.textContent = 'Enter the reset code from your admin.';
+    err.style.display = 'block';
+    return;
+  }
+  const hash = await sha256Hex(val);
+  if(hash !== RESET_CODE_HASH){
+    err.textContent = 'Incorrect code. Try again.';
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+    return;
+  }
+  closeModal('resetCodeOverlay');
+  if(!confirm('This will permanently erase every trade, rule and journal entry on this account. This cannot be undone. Continue?')) return;
+  await clearAllData();
+}
+async function clearAllData(){
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  ['g_accountBalance','g_maxDailyLoss','g_maxTrades','g_minRR','g_maxConsecLosses','g_coolingOff','g_maxRiskPerTrade'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const gCur = document.getElementById('g_currency');
+  if(gCur) gCur.value = 'USD';
+  const gHint = document.getElementById('gateHint');
+  if(gHint) gHint.textContent = '';
+  const gPreview = document.getElementById('gateRiskPreview');
+  if(gPreview) gPreview.textContent = '';
+  await saveState();
+  showToast('Data cleared. Set up your rules again.');
+  document.getElementById('appShell').classList.remove('show');
+  document.getElementById('gateScreen').classList.add('show');
+}
+
 /* ============ NAV (left sidebar) ============ */
 document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -3108,6 +3212,7 @@ async function saveRules(){
   };
   if(isDemoMode){ state.rules.currency = 'USD'; state.rules.accountBalance = 1000; }
   await saveState(); renderDashboard(); renderGauges(); updateCurrencyLabels();
+  updateGateRiskPreview(); updateRulesRiskPreview();
   showToast('Rules saved');
 }
 
@@ -4720,6 +4825,20 @@ if('serviceWorker' in navigator){
     <div class="btn-row" style="margin-top:6px;gap:10px;display:flex;">
       <button class="side-logout" style="flex:1;" onclick="closePeriodReview()">Close</button>
       <button class="btn btn-primary btn-sm" style="flex:1;" onclick="closePeriodReview(); document.querySelector('.side-navbtn[data-view=analytics]').click();">View Analytics</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET DATA (reset code required) MODAL -->
+<div class="overlay" id="resetCodeOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h3>Enter Reset Code From Admin</h3>
+    <div class="sub">Clearing your data requires a reset code from your admin. This permanently erases every trade, rule and journal entry on this account.</div>
+    <div class="field"><label>Reset Code</label><input type="password" id="resetCodeInput" placeholder="Enter code" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="hint" id="resetCodeError" style="display:none;color:var(--loss-bright);margin-top:-2px;">Incorrect code. Try again.</div>
+    <div class="btn-row" style="margin-top:16px;gap:10px;display:flex;">
+      <button class="side-logout" style="flex:1;" onclick="closeModal('resetCodeOverlay')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1;" onclick="submitResetCode()">Confirm</button>
     </div>
   </div>
 </div>
