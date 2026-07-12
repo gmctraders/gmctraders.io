@@ -266,6 +266,17 @@ a{color:var(--bronze-bright);}
 }
 .side-navbtn.demo-locked{opacity:0.62;}
 .side-navbtn.demo-locked:hover{opacity:0.85;}
+#r_presetRow.demo-locked{opacity:0.55;position:relative;}
+#r_presetRow.demo-locked button{cursor:not-allowed;}
+#r_presetRow.demo-locked::after{content:'🔒 Presets unlock with real access';font-size:11px;color:var(--slate-dim);width:100%;margin-top:2px;}
+#rulesConfluencePanel.demo-locked{position:relative;cursor:pointer;}
+#rulesConfluencePanel.demo-locked>*{filter:blur(5px);opacity:0.65;pointer-events:none;user-select:none;}
+#rulesConfluencePanel.demo-locked::after{
+  content:'🔒 Setup Confluence unlocks with real access — tap to learn more';
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:20px;font-size:12.5px;font-weight:600;color:var(--platinum);
+  background:rgba(7,9,10,0.32);border-radius:inherit;
+}
 .demo-tease-icon{font-size:34px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 4px 14px rgba(212,175,55,0.35));}
 .demo-tease-title{font-family:'Fraunces',serif;font-weight:650;font-size:19px;color:var(--platinum);margin-bottom:6px;}
 .demo-tease-copy{font-size:13px;color:var(--slate);line-height:1.6;margin-bottom:18px;}
@@ -1637,7 +1648,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="field"><label>Cooling-off period after a loss (hours)</label><input type="number" id="r_coolingOff" min="0" step="0.5" placeholder="e.g. 1" oninput="onRulesFieldInput()"></div>
           <div class="field"><label>Max risk per single trade (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100" oninput="onRulesFieldInput()"></div>
         </div>
-        <div class="preset-row" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="preset-row" id="r_presetRow" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','conservative')">Conservative preset</button>
           <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','standard')">Standard preset</button>
           <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','aggressive')">Aggressive preset</button>
@@ -2182,7 +2193,7 @@ const DEMO_EMAIL_KEY = 'ghostDiscipline_demoEmail';
 const DEMO_STATE_KEY = 'ghostDiscipline_demoState';
 const DEMO_FP_KEY = 'ghostDiscipline_deviceFp';
 // Rooms that stay locked during the trial — full arsenal is reserved for real access.
-const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal','about','rules'];
+const DEMO_LOCKED_VIEWS = ['analytics','playbook','propfirm','journal','about'];
 
 // Lightweight, dependency-free device fingerprint (canvas + WebGL + hardware
 // signals hashed together). This raises the bar against casual repeat-trial
@@ -2351,6 +2362,9 @@ function lockDemoAccountFields(){
 function applyDemoLocks(){
   enforceDemoAccountDefaults();
   lockDemoAccountFields();
+  const rPresetRow = document.getElementById('r_presetRow');
+  if(rPresetRow) rPresetRow.classList.toggle('demo-locked', isDemoMode);
+  if(document.getElementById('rulesConfluencePanel')) updateRulesConfluence();
   const topBanner = document.getElementById('demoTopBanner');
   if(topBanner) topBanner.style.display = isDemoMode ? 'block' : 'none';
   document.querySelectorAll('.side-navbtn[data-view]').forEach(btn=>{
@@ -2415,7 +2429,7 @@ function openDemoTease(title, copy){
   document.getElementById('demoLockedFeatureOverlay').classList.add('show');
 }
 function showLockedFeatureTease(view){
-  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal', about:'About & Reset', rules:'Rule Builder' };
+  const labels = { analytics:'Analytics', playbook:'Playbook', propfirm:'Prop Firm', journal:'Journal', about:'About & Reset' };
   const label = labels[view] || 'This room';
   openDemoTease(`${label} is for real accounts`, `The Proving Ground tests discipline, not the full arsenal — ${label} unlocks the moment you're in for real.`);
 }
@@ -3087,7 +3101,16 @@ function renderConfluencePanel(prefix, containerId){
     ${result.items.map(i=>`<div class="check-item ${i.tier}"><span>${i.tier==='pass'?'&#10003;':i.tier==='warn'?'!':'&#10005;'}</span>${escapeHtml(i.text)}</div>`).join('')}
   `;
 }
-function updateRulesConfluence(){ renderConfluencePanel('r_', 'rulesConfluencePanel'); }
+function updateRulesConfluence(){
+  renderConfluencePanel('r_', 'rulesConfluencePanel');
+  const panel = document.getElementById('rulesConfluencePanel');
+  if(panel){
+    panel.classList.toggle('demo-locked', isDemoMode);
+    panel.onclick = isDemoMode
+      ? ()=> showLockedFieldTease('Setup Confluence', 'Live scoring on your rule setup is reserved for real accounts — you can still fill in every field and save during the trial.')
+      : null;
+  }
+}
 function updateGateConfluence(){ renderConfluencePanel('g_', 'gateConfluencePanel'); }
 function onRulesFieldInput(){ updateRulesRiskPreview(); updateRulesConfluence(); }
 function onGateFieldInput(){ updateGateRiskPreview(); updateGateConfluence(); }
@@ -3102,7 +3125,7 @@ const RULE_PRESETS = {
 };
 function applyRulePreset(prefix, key){
   if(prefix==='r_' && isDemoMode){
-    showLockedFeatureTease('rules');
+    showLockedFieldTease('Rule presets', 'Quick-start presets are reserved for real accounts — build your rules by hand during the trial, or unlock full access for one-tap presets.');
     return;
   }
   const p = RULE_PRESETS[key];
