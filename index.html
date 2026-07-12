@@ -684,9 +684,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .check-item:last-child{border-bottom:none;}
 .check-item.pass{color:var(--platinum);}
 .check-item.fail{color:var(--loss);}
+.check-item.warn{color:var(--amber);}
 .check-item span:first-child{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
 .check-item.pass span:first-child{background:rgba(16,185,129,0.15);color:var(--win);}
 .check-item.fail span:first-child{background:rgba(244,63,94,0.15);color:var(--loss);}
+.check-item.warn span:first-child{background:rgba(245,166,35,0.15);color:var(--amber);}
 .violation-banner{background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:12px;
   padding:13px 15px;margin-top:16px;font-size:12.5px;color:#ffc2ca;line-height:1.55;}
 .review-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
@@ -1095,44 +1097,50 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
       <div class="row2">
         <div class="field">
           <label>Account balance (<span class="cur-sym">$</span>)</label>
-          <input type="number" id="g_accountBalance" min="0" step="1" placeholder="e.g. 5000">
+          <input type="number" id="g_accountBalance" min="0" step="1" placeholder="e.g. 5000" oninput="onGateFieldInput()">
         </div>
         <div class="field">
           <label>Risk per trade (%)</label>
-          <input type="number" id="g_riskPerTrade" min="0" step="0.1" placeholder="e.g. 1" oninput="updateGateRiskPreview()">
+          <input type="number" id="g_riskPerTrade" min="0" step="0.1" placeholder="e.g. 1" oninput="onGateFieldInput()">
         </div>
       </div>
       <div class="hint calc" id="gateRiskPreview" style="margin-bottom:14px;"></div>
       <div class="row2">
         <div class="field">
           <label>Maximum daily loss (<span class="cur-sym">$</span>)</label>
-          <input type="number" id="g_maxDailyLoss" min="0" step="1" placeholder="e.g. 200">
+          <input type="number" id="g_maxDailyLoss" min="0" step="1" placeholder="e.g. 200" oninput="onGateFieldInput()">
         </div>
         <div class="field">
           <label>Maximum trades per day</label>
-          <input type="number" id="g_maxTrades" min="1" step="1" placeholder="e.g. 3">
+          <input type="number" id="g_maxTrades" min="1" step="1" placeholder="e.g. 3" oninput="onGateFieldInput()">
         </div>
       </div>
       <div class="row2">
         <div class="field">
           <label>Minimum reward-to-risk ratio</label>
-          <input type="number" id="g_minRR" min="0" step="0.1" placeholder="e.g. 2">
+          <input type="number" id="g_minRR" min="0" step="0.1" placeholder="e.g. 2" oninput="onGateFieldInput()">
         </div>
         <div class="field">
           <label>Max consecutive losses before stopping</label>
-          <input type="number" id="g_maxConsecLosses" min="1" step="1" placeholder="e.g. 2">
+          <input type="number" id="g_maxConsecLosses" min="1" step="1" placeholder="e.g. 2" oninput="onGateFieldInput()">
         </div>
       </div>
       <div class="row2">
         <div class="field">
-          <label>Cooling-off period after a loss (min)</label>
-          <input type="number" id="g_coolingOff" min="0" step="1" placeholder="e.g. 30">
+          <label>Cooling-off period after a loss (hours)</label>
+          <input type="number" id="g_coolingOff" min="0" step="0.5" placeholder="e.g. 1" oninput="onGateFieldInput()">
         </div>
         <div class="field">
           <label>Max risk per single trade (<span class="cur-sym">$</span>)</label>
-          <input type="number" id="g_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100">
+          <input type="number" id="g_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100" oninput="onGateFieldInput()">
         </div>
       </div>
+      <div class="preset-row" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button type="button" class="pf-phase-chip" onclick="applyRulePreset('g_','conservative')">Conservative preset</button>
+        <button type="button" class="pf-phase-chip" onclick="applyRulePreset('g_','standard')">Standard preset</button>
+        <button type="button" class="pf-phase-chip" onclick="applyRulePreset('g_','aggressive')">Aggressive preset</button>
+      </div>
+      <div class="card tilt" style="margin-bottom:16px;" id="gateConfluencePanel"></div>
       <div class="hint" id="gateHint" style="margin-bottom:14px;"></div>
       <button class="btn-gold" onclick="submitGateRules()">Lock In My Rules &amp; Enter</button>
     </div>
@@ -1613,22 +1621,28 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <select id="r_currency" onchange="handleCurrencyChange(this)"></select>
         </div>
         <div class="row2">
-          <div class="field"><label>Account balance (<span class="cur-sym">$</span>)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="updateRulesRiskPreview()"></div>
-          <div class="field"><label>Risk per trade (%)</label><input type="number" id="r_riskPerTrade" min="0" step="0.1" oninput="updateRulesRiskPreview()"></div>
+          <div class="field"><label>Account balance (<span class="cur-sym">$</span>)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="onRulesFieldInput()"></div>
+          <div class="field"><label>Risk per trade (%)</label><input type="number" id="r_riskPerTrade" min="0" step="0.1" oninput="onRulesFieldInput()"></div>
         </div>
         <div class="hint calc" id="rulesRiskPreview" style="margin-bottom:14px;"></div>
         <div class="row2">
-          <div class="field"><label>Maximum daily loss (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxDailyLoss" min="0" step="1"></div>
-          <div class="field"><label>Maximum trades per day</label><input type="number" id="r_maxTrades" min="1" step="1"></div>
+          <div class="field"><label>Maximum daily loss (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxDailyLoss" min="0" step="1" oninput="onRulesFieldInput()"></div>
+          <div class="field"><label>Maximum trades per day</label><input type="number" id="r_maxTrades" min="1" step="1" oninput="onRulesFieldInput()"></div>
         </div>
         <div class="row2">
-          <div class="field"><label>Minimum reward-to-risk ratio</label><input type="number" id="r_minRR" min="0" step="0.1"></div>
-          <div class="field"><label>Max consecutive losing trades</label><input type="number" id="r_maxConsecLosses" min="1" step="1"></div>
+          <div class="field"><label>Minimum reward-to-risk ratio</label><input type="number" id="r_minRR" min="0" step="0.1" oninput="onRulesFieldInput()"></div>
+          <div class="field"><label>Max consecutive losing trades</label><input type="number" id="r_maxConsecLosses" min="1" step="1" oninput="onRulesFieldInput()"></div>
         </div>
         <div class="row2">
-          <div class="field"><label>Cooling-off period after a loss (minutes)</label><input type="number" id="r_coolingOff" min="0" step="1" placeholder="e.g. 30"></div>
-          <div class="field"><label>Max risk per single trade (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100"></div>
+          <div class="field"><label>Cooling-off period after a loss (hours)</label><input type="number" id="r_coolingOff" min="0" step="0.5" placeholder="e.g. 1" oninput="onRulesFieldInput()"></div>
+          <div class="field"><label>Max risk per single trade (<span class="cur-sym">$</span>)</label><input type="number" id="r_maxRiskPerTrade" min="0" step="1" placeholder="e.g. 100" oninput="onRulesFieldInput()"></div>
         </div>
+        <div class="preset-row" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','conservative')">Conservative preset</button>
+          <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','standard')">Standard preset</button>
+          <button type="button" class="pf-phase-chip" onclick="applyRulePreset('r_','aggressive')">Aggressive preset</button>
+        </div>
+        <div class="card tilt" style="margin-bottom:18px;" id="rulesConfluencePanel"></div>
         <button class="btn btn-primary" onclick="saveRules()">Save Rules</button>
         <div class="hint" id="rulesSavedHint" style="margin-top:10px"></div>
       </div>
@@ -2717,6 +2731,15 @@ function cooldownMinutesRemaining(){
   if(!mins || !last) return 0;
   return Math.max(0, Math.ceil(mins - (Date.now() - last) / 60000));
 }
+// Cooling-off is entered in hours but stored internally in minutes (existing
+// violation/gauge math is minute-based) - this just formats it back for display.
+function formatDuration(totalMinutes){
+  const m = Math.max(0, Math.round(totalMinutes));
+  const h = Math.floor(m/60);
+  const rem = m%60;
+  if(h<=0) return `${rem}m`;
+  return rem>0 ? `${h}h ${rem}m` : `${h}h`;
+}
 function computeDisciplineScore(){
   const r = state.rules;
   let score = 100;
@@ -2925,7 +2948,8 @@ async function submitGateRules(){
     hint.style.color = 'var(--loss)';
     return;
   }
-  vals.coolingOffMinutes = numOrNullFrom('g_coolingOff');
+  const gCoolHours = numOrNullFrom('g_coolingOff');
+  vals.coolingOffMinutes = gCoolHours!=null ? gCoolHours*60 : null;
   vals.maxRiskPerTrade = numOrNullFrom('g_maxRiskPerTrade');
   vals.currency = document.getElementById('g_currency').value || 'USD';
   if(isDemoMode){ vals.currency = 'USD'; vals.accountBalance = 1000; }
@@ -2940,6 +2964,160 @@ async function submitGateRules(){
 function numOrNullFrom(id){
   const v = document.getElementById(id).value;
   return v === '' ? null : parseFloat(v);
+}
+
+/* ============ RULE CONFLUENCE (pre-save setup analysis) ============ */
+// Scores the rule set someone is about to lock in - not a "good/bad" verdict,
+// just how much room it gives them before it forces a decision or lets a bad
+// day snowball. Purely descriptive: it never blocks saving, it just shows the
+// tradeoffs before they commit, so a rushed setup doesn't slip through.
+function computeRuleConfluence(v){
+  const items = [];
+  let weightedSum = 0, weightTotal = 0;
+  function add(weight, fitness, tier, text){
+    weightedSum += weight*fitness; weightTotal += weight;
+    items.push({ tier, text });
+  }
+
+  if(v.riskPct!=null && v.riskPct>0){
+    let fitness, tier, msg;
+    if(v.riskPct>=0.25 && v.riskPct<=2){ fitness=1; tier='pass'; msg=`Risk per trade (${v.riskPct}%) sits in a sustainable band.`; }
+    else if(v.riskPct<0.25){ fitness=0.6; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is very conservative - safe, but growth will be slow.`; }
+    else if(v.riskPct<=3){ fitness=0.55; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is on the high side - most traders who last run 0.5-2%.`; }
+    else { fitness=0.15; tier='fail'; msg=`Risk per trade (${v.riskPct}%) is steep - a short losing streak could do real damage.`; }
+    add(20, fitness, tier, msg);
+  }
+
+  if(v.maxDailyLoss && v.balance && v.riskPct){
+    const perTradeRisk = v.balance * v.riskPct/100;
+    const ratio = perTradeRisk>0 ? v.maxDailyLoss/perTradeRisk : null;
+    if(ratio!=null){
+      let fitness, tier, msg;
+      if(ratio>=2 && ratio<=5){ fitness=1; tier='pass'; msg=`Daily loss limit absorbs about ${ratio.toFixed(1)} full-risk losses - enough room for an off day without it becoming a crisis.`; }
+      else if(ratio<2){ fitness=0.4; tier='warn'; msg=`Daily loss limit only covers about ${ratio.toFixed(1)} losing trade(s) - one bad trade ends your day, which can tempt you to break the rule instead.`; }
+      else if(ratio<=8){ fitness=0.6; tier='warn'; msg=`Daily loss limit covers about ${ratio.toFixed(1)} losing trades - fairly loose, it may not stop a bad day early enough.`; }
+      else { fitness=0.25; tier='fail'; msg=`Daily loss limit covers ${ratio.toFixed(1)} losing trades - so loose it barely functions as a stop.`; }
+      add(20, fitness, tier, msg);
+    }
+  }
+
+  if(v.maxTrades){
+    let fitness, tier, msg;
+    if(v.maxTrades>=1 && v.maxTrades<=5){ fitness=1; tier='pass'; msg=`${v.maxTrades} trade(s) a day keeps you selective.`; }
+    else if(v.maxTrades<=8){ fitness=0.55; tier='warn'; msg=`${v.maxTrades} trades a day is a lot to stay selective across - watch for quantity over quality.`; }
+    else { fitness=0.2; tier='fail'; msg=`${v.maxTrades} trades a day opens the door to overtrading.`; }
+    add(15, fitness, tier, msg);
+  }
+
+  if(v.minRR!=null && v.minRR>0){
+    let fitness, tier, msg;
+    if(v.minRR>=1.5){ fitness=1; tier='pass'; msg=`Minimum ${v.minRR}R keeps the math on your side even at an average win rate.`; }
+    else if(v.minRR>=1){ fitness=0.55; tier='warn'; msg=`Minimum ${v.minRR}R works, but you'll need a high win rate to stay profitable.`; }
+    else { fitness=0.2; tier='fail'; msg=`Minimum ${v.minRR}R means you need to win most trades just to break even - tough math.`; }
+    add(15, fitness, tier, msg);
+  }
+
+  if(v.maxConsecLosses){
+    let fitness, tier, msg;
+    if(v.maxConsecLosses===1){ fitness=0.5; tier='warn'; msg=`Stopping after just 1 loss is very reactive - normal variance could trigger it constantly.`; }
+    else if(v.maxConsecLosses<=4){ fitness=1; tier='pass'; msg=`Stopping after ${v.maxConsecLosses} losses in a row catches a bad stretch before it snowballs.`; }
+    else if(v.maxConsecLosses<=6){ fitness=0.6; tier='warn'; msg=`Allowing ${v.maxConsecLosses} losses in a row before stopping gives a losing streak real room to run.`; }
+    else { fitness=0.3; tier='fail'; msg=`${v.maxConsecLosses} losses in a row before stopping is a long leash for a bad streak.`; }
+    add(10, fitness, tier, msg);
+  }
+
+  if(v.coolingOffHours!=null){
+    let fitness, tier, msg;
+    if(v.coolingOffHours<=0){ fitness=0.2; tier='warn'; msg=`No cooling-off period set - nothing stands between a loss and your next entry.`; }
+    else if(v.coolingOffHours<=24){ fitness=1; tier='pass'; msg=`A ${v.coolingOffHours}h cooling-off after a loss gives emotion time to settle before you're back in.`; }
+    else { fitness=0.7; tier='warn'; msg=`A ${v.coolingOffHours}h cooling-off is long enough it may cost you legitimate setups - worth confirming it fits your style.`; }
+    add(10, fitness, tier, msg);
+  }
+
+  if(v.maxRiskPerTrade && v.balance && v.riskPct){
+    const expected = v.balance*v.riskPct/100;
+    const ratio = expected>0 ? v.maxRiskPerTrade/expected : null;
+    if(ratio!=null){
+      let fitness, tier, msg;
+      if(ratio<=1.2){ fitness=1; tier='pass'; msg=`Your hard $ risk cap lines up with your risk % - it's actually enforcing something.`; }
+      else if(ratio<=2){ fitness=0.5; tier='warn'; msg=`Your hard $ risk cap is looser than what your risk % already implies - it's not doing much capping right now.`; }
+      else { fitness=0.2; tier='fail'; msg=`Your hard $ risk cap is far looser than your risk % implies - effectively no cap at all.`; }
+      add(10, fitness, tier, msg);
+    }
+  }
+
+  const score = weightTotal>0 ? Math.round((weightedSum/weightTotal)*100) : null;
+  return { score, items };
+}
+function confluenceTier(score){
+  if(score>=85) return { label:'Reinforced', color:'var(--gold-bright)' };
+  if(score>=65) return { label:'Balanced', color:'var(--bronze-bright)' };
+  if(score>=40) return { label:'Loose', color:'var(--amber)' };
+  return { label:'Exposed', color:'var(--loss-bright)' };
+}
+function readRuleFormValues(prefix){
+  const num = suffix => { const el = document.getElementById(prefix+suffix); if(!el) return null; const val = el.value; return val==='' ? null : parseFloat(val); };
+  return {
+    balance: num('accountBalance'),
+    riskPct: num('riskPerTrade'),
+    maxDailyLoss: num('maxDailyLoss'),
+    maxTrades: num('maxTrades'),
+    minRR: num('minRR'),
+    maxConsecLosses: num('maxConsecLosses'),
+    coolingOffHours: num('coolingOff'),
+    maxRiskPerTrade: num('maxRiskPerTrade')
+  };
+}
+function renderConfluencePanel(prefix, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const vals = readRuleFormValues(prefix);
+  const result = computeRuleConfluence(vals);
+  if(result.score==null){
+    el.innerHTML = `<div class="hint" style="margin:0;">Fill in a few fields above to see how this rule set holds up before you lock it in.</div>`;
+    return;
+  }
+  const tier = confluenceTier(result.score);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+      <h2 style="margin:0;">Setup <span class="accent">Confluence</span></h2>
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;color:${tier.color}">${result.score}/100 &middot; ${tier.label}</div>
+    </div>
+    <div class="score-desc" style="margin-top:0;margin-bottom:8px;">A read on how much room these rules give you before they force a decision - not a grade, just the tradeoffs.</div>
+    ${result.items.map(i=>`<div class="check-item ${i.tier}"><span>${i.tier==='pass'?'&#10003;':i.tier==='warn'?'!':'&#10005;'}</span>${escapeHtml(i.text)}</div>`).join('')}
+  `;
+}
+function updateRulesConfluence(){ renderConfluencePanel('r_', 'rulesConfluencePanel'); }
+function updateGateConfluence(){ renderConfluencePanel('g_', 'gateConfluencePanel'); }
+function onRulesFieldInput(){ updateRulesRiskPreview(); updateRulesConfluence(); }
+function onGateFieldInput(){ updateGateRiskPreview(); updateGateConfluence(); }
+
+// Quick-start templates - balance-agnostic (risk %, ratios, hours) so they work
+// for any account size. Dollar fields (daily loss / hard risk cap) are only
+// filled in once a balance is entered, computed from that preset's risk %.
+const RULE_PRESETS = {
+  conservative: { label:'Conservative', riskPct:0.5, maxTrades:3, minRR:2,   maxConsecLosses:2, coolingOffHours:2,   dailyLossMultiplier:2 },
+  standard:     { label:'Standard',     riskPct:1,   maxTrades:4, minRR:1.5, maxConsecLosses:3, coolingOffHours:1,   dailyLossMultiplier:3 },
+  aggressive:   { label:'Aggressive',   riskPct:2,   maxTrades:6, minRR:1.2, maxConsecLosses:4, coolingOffHours:0.5, dailyLossMultiplier:4 }
+};
+function applyRulePreset(prefix, key){
+  const p = RULE_PRESETS[key];
+  if(!p) return;
+  const set = (suffix, val) => { const el = document.getElementById(prefix+suffix); if(el) el.value = val; };
+  set('riskPerTrade', p.riskPct);
+  set('maxTrades', p.maxTrades);
+  set('minRR', p.minRR);
+  set('maxConsecLosses', p.maxConsecLosses);
+  set('coolingOff', p.coolingOffHours);
+  const balEl = document.getElementById(prefix+'accountBalance');
+  const bal = balEl ? parseFloat(balEl.value) : NaN;
+  if(!isNaN(bal) && bal>0){
+    const perTradeRisk = +(bal*p.riskPct/100).toFixed(2);
+    set('maxDailyLoss', +(perTradeRisk*p.dailyLossMultiplier).toFixed(2));
+    set('maxRiskPerTrade', perTradeRisk);
+  }
+  if(prefix==='r_'){ onRulesFieldInput(); } else { onGateFieldInput(); }
+  showToast(`${p.label} preset applied - tweak anything before saving.`);
 }
 
 /* ============ CLEAR DATA (reset code gated via Supabase RPC) ============ */
@@ -3178,12 +3356,14 @@ function renderRulesForm(){
   document.getElementById('r_riskPerTrade').value = state.rules.riskPerTrade ?? '';
   document.getElementById('r_minRR').value = state.rules.minRR ?? '';
   document.getElementById('r_maxConsecLosses').value = state.rules.maxConsecLosses ?? '';
-  document.getElementById('r_coolingOff').value = state.rules.coolingOffMinutes ?? '';
+  document.getElementById('r_coolingOff').value = state.rules.coolingOffMinutes!=null ? +(state.rules.coolingOffMinutes/60).toFixed(2) : '';
   document.getElementById('r_maxRiskPerTrade').value = state.rules.maxRiskPerTrade ?? '';
   updateRulesRiskPreview();
   updateCurrencyLabels();
+  updateRulesConfluence();
 }
 async function saveRules(){
+  const rCoolHours = numOrNullFrom('r_coolingOff');
   state.rules = {
     currency: document.getElementById('r_currency').value || 'USD',
     accountBalance: numOrNullFrom('r_accountBalance'),
@@ -3192,12 +3372,12 @@ async function saveRules(){
     riskPerTrade: numOrNullFrom('r_riskPerTrade'),
     minRR: numOrNullFrom('r_minRR'),
     maxConsecLosses: numOrNullFrom('r_maxConsecLosses'),
-    coolingOffMinutes: numOrNullFrom('r_coolingOff'),
+    coolingOffMinutes: rCoolHours!=null ? rCoolHours*60 : null,
     maxRiskPerTrade: numOrNullFrom('r_maxRiskPerTrade'),
   };
   if(isDemoMode){ state.rules.currency = 'USD'; state.rules.accountBalance = 1000; }
   await saveState(); renderDashboard(); renderGauges(); updateCurrencyLabels();
-  updateGateRiskPreview(); updateRulesRiskPreview();
+  updateGateRiskPreview(); updateRulesRiskPreview(); updateRulesConfluence();
   showToast('Rules saved');
 }
 
@@ -4243,7 +4423,7 @@ function renderGauges(){
     const remaining = cooldownMinutesRemaining();
     const cPct = state.rules.coolingOffMinutes ? Math.min(1, remaining/state.rules.coolingOffMinutes) : 0;
     units.push({ id:'gCool', pct:cPct, cls: cPct>0.5?'bad':(cPct>0?'warn':'good'),
-      val: remaining>0 ? `${remaining}m left` : 'Clear', cap:'Cooling-off after loss' });
+      val: remaining>0 ? `${formatDuration(remaining)} left` : 'Clear', cap:'Cooling-off after loss' });
   }
 
   row.innerHTML = units.map(u=>`
@@ -4358,7 +4538,7 @@ function runPretradeChecks(){
   if(state.rules.coolingOffMinutes!=null){
     const fail = isInCooldown();
     if(fail) violated = true;
-    checks.push({label: fail ? `Cooling-off period (${cooldownMinutesRemaining()} min remaining)` : `Cooling-off period observed`, fail});
+    checks.push({label: fail ? `Cooling-off period (${formatDuration(cooldownMinutesRemaining())} remaining)` : `Cooling-off period observed`, fail});
   }
 
   document.getElementById('pretradeMoodStep').style.display = 'none';
