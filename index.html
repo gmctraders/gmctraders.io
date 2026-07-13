@@ -1105,6 +1105,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <select id="g_currency" onchange="handleCurrencyChange(this)"></select>
         <div class="hint" style="margin-top:6px;">Every dollar amount in the app — risk, P&amp;L, calendar, journal — will be shown in this currency. Defaults to USD.</div>
       </div>
+      <div class="field">
+        <label>Account type</label>
+        <select id="g_accountType"></select>
+        <div class="hint" style="margin-top:6px;">Sets how big a "1.00 lot" actually is for you (Standard/Pro = full-size contract, Mini = 1/10th, Micro/Cent = 1/100th). This is what makes the Order Book's $ risk and $ return correct for your lot sizes.</div>
+      </div>
       <div class="row2">
         <div class="field">
           <label>Account balance (<span class="cur-sym">$</span>)</label>
@@ -1526,7 +1531,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           <div class="row2">
             <div class="field">
               <label>Pair / Instrument</label>
-              <input type="text" id="o_pair" list="pairSuggestions" placeholder="e.g. EUR/USD, XAUUSD">
+              <input type="text" id="o_pair" list="pairSuggestions" placeholder="e.g. EUR/USD, XAUUSD" oninput="updateOrderLotAcctHint()">
               <datalist id="pairSuggestions">
                 <option value="EUR/USD"><option value="GBP/USD"><option value="USD/JPY"><option value="USD/CHF">
                 <option value="AUD/USD"><option value="USD/CAD"><option value="NZD/USD"><option value="EUR/JPY">
@@ -1556,7 +1561,11 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
             <div class="field"><label>Take profit</label><input type="number" step="any" id="o_tp" placeholder="e.g. 1.0910" oninput="updateOrderRRPreview()"></div>
           </div>
           <div class="hint calc" id="orderRRPreview" style="margin-bottom:10px;">Enter entry, stop loss and take profit to auto-calculate planned R:R.</div>
-          <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="auto-calculated, or set your own" oninput="updateOrderRRPreview()"></div>
+          <div class="row2">
+            <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="auto-calculated, or set your own" oninput="updateOrderRRPreview()"></div>
+            <div class="field"><label>Lot size</label><input type="number" step="0.01" min="0" id="o_lot" placeholder="e.g. 0.01" oninput="updateOrderRRPreview()"></div>
+          </div>
+          <div class="hint" id="orderLotAcctHint" style="margin:-8px 0 10px;"></div>
           <div class="card tilt" id="orderWorthPanel" style="margin-bottom:16px;display:none;"></div>
           <div class="field">
             <label>Logic behind this order <span class="hint-inline">tap what applies</span></label>
@@ -1639,6 +1648,10 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
         <div class="field">
           <label>Account currency</label>
           <select id="r_currency" onchange="handleCurrencyChange(this)"></select>
+        </div>
+        <div class="field">
+          <label>Account type</label>
+          <select id="r_accountType" onchange="onRulesFieldInput()"></select>
         </div>
         <div class="row2">
           <div class="field"><label>Account balance (<span class="cur-sym">$</span>)</label><input type="number" id="r_accountBalance" min="0" step="1" oninput="onRulesFieldInput()"></div>
@@ -1987,6 +2000,8 @@ const ACCOUNT_TYPES = {
   cent:{     label:'Cent',     mult:0.01 }
 };
 function accountTypeLabel(key){ return (ACCOUNT_TYPES[key]||ACCOUNT_TYPES.standard).label; }
+const ACCOUNT_TYPE_OPTIONS_HTML = Object.entries(ACCOUNT_TYPES).map(([key,a])=>
+  `<option value="${key}">${a.label}${a.mult!==1 ? ` (1 lot = ${a.mult}x Standard)` : ''}</option>`).join('');
 // Units held per 1.00 lot on a Standard account, before the account-type
 // multiplier above is applied. Forex defaults to the usual 100,000-unit
 // contract; metals, crypto and index CFDs use their own conventions.
@@ -2420,12 +2435,13 @@ function enforceDemoAccountDefaults(){
   if(!isDemoMode) return;
   state.rules.currency = 'USD';
   state.rules.accountBalance = 1000;
+  state.rules.accountType = 'standard';
 }
 function lockDemoAccountFields(){
-  ['g_currency','g_accountBalance','r_currency','r_accountBalance'].forEach(id=>{
+  ['g_currency','g_accountBalance','r_currency','r_accountBalance','g_accountType','r_accountType'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
-    if(isDemoMode){ el.value = id.includes('currency') ? 'USD' : 1000; }
+    if(isDemoMode){ el.value = id.includes('currency') ? 'USD' : (id.includes('accountType') ? 'standard' : 1000); }
     const field = el.closest('.field');
     if(field) field.classList.toggle('field-locked', isDemoMode);
   });
@@ -2530,8 +2546,10 @@ function setupDemoFieldGuards(){
     { id:'p_monk', label:'Monk Code' },
     { id:'g_currency', label:'Account currency', msg:accountLockCopy },
     { id:'g_accountBalance', label:'Account balance', msg:accountLockCopy },
+    { id:'g_accountType', label:'Account type', msg:accountLockCopy },
     { id:'r_currency', label:'Account currency', msg:accountLockCopy },
-    { id:'r_accountBalance', label:'Account balance', msg:accountLockCopy }
+    { id:'r_accountBalance', label:'Account balance', msg:accountLockCopy },
+    { id:'r_accountType', label:'Account type', msg:accountLockCopy }
   ];
   guarded.forEach(({id,label,msg})=>{
     const el = document.getElementById(id);
@@ -3135,7 +3153,8 @@ async function submitGateRules(){
   vals.coolingOffMinutes = gCoolHours!=null ? gCoolHours*60 : null;
   vals.maxRiskPerTrade = numOrNullFrom('g_maxRiskPerTrade');
   vals.currency = document.getElementById('g_currency').value || 'USD';
-  if(isDemoMode){ vals.currency = 'USD'; vals.accountBalance = 1000; }
+  vals.accountType = document.getElementById('g_accountType').value || 'standard';
+  if(isDemoMode){ vals.currency = 'USD'; vals.accountBalance = 1000; vals.accountType = 'standard'; }
   state.rules = vals;
   state.rulesCompleted = true;
   await saveState();
@@ -3559,6 +3578,7 @@ function renderDashboard(){
 function renderRulesForm(){
   enforceDemoAccountDefaults();
   document.getElementById('r_currency').value = state.rules.currency || 'USD';
+  document.getElementById('r_accountType').value = state.rules.accountType || 'standard';
   document.getElementById('r_accountBalance').value = state.rules.accountBalance ?? '';
   lockDemoAccountFields();
   document.getElementById('r_maxDailyLoss').value = state.rules.maxDailyLoss ?? '';
@@ -3576,6 +3596,7 @@ async function saveRules(){
   const rCoolHours = numOrNullFrom('r_coolingOff');
   state.rules = {
     currency: document.getElementById('r_currency').value || 'USD',
+    accountType: document.getElementById('r_accountType').value || 'standard',
     accountBalance: numOrNullFrom('r_accountBalance'),
     maxDailyLoss: numOrNullFrom('r_maxDailyLoss'),
     maxTrades: numOrNullFrom('r_maxTrades'),
@@ -3585,7 +3606,7 @@ async function saveRules(){
     coolingOffMinutes: rCoolHours!=null ? rCoolHours*60 : null,
     maxRiskPerTrade: numOrNullFrom('r_maxRiskPerTrade'),
   };
-  if(isDemoMode){ state.rules.currency = 'USD'; state.rules.accountBalance = 1000; }
+  if(isDemoMode){ state.rules.currency = 'USD'; state.rules.accountBalance = 1000; state.rules.accountType = 'standard'; }
   await saveState(); renderDashboard(); renderGauges(); updateCurrencyLabels();
   updateGateRiskPreview(); updateRulesRiskPreview(); updateRulesConfluence();
   showToast('Rules saved');
@@ -3957,6 +3978,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if(gCur){ gCur.innerHTML = CURRENCY_OPTIONS_HTML; gCur.value = 'USD'; }
   const rCur = document.getElementById('r_currency');
   if(rCur) rCur.innerHTML = CURRENCY_OPTIONS_HTML;
+  const gAcct = document.getElementById('g_accountType');
+  if(gAcct){ gAcct.innerHTML = ACCOUNT_TYPE_OPTIONS_HTML; gAcct.value = 'standard'; gAcct.addEventListener('change', onGateFieldInput); }
+  const rAcct = document.getElementById('r_accountType');
+  if(rAcct) rAcct.innerHTML = ACCOUNT_TYPE_OPTIONS_HTML;
   const li = document.getElementById('t_lossAmount');
   if(li) li.addEventListener('input', ()=>{ li.dataset.touched='1'; });
   const wi = document.getElementById('t_winAmount');
@@ -3988,11 +4013,28 @@ function updateOrderRRPreview(){
   // Fall back to whatever's actually sitting in the Planned R:R field (typed by
   // hand, or auto-filled above) so the worth-it read reacts to manual edits too.
   const rrForAdvice = rr!=null ? rr : (parseFloat(rrInput.value) || null);
-  renderOrderWorthPanel(rrForAdvice);
+  updateOrderLotAcctHint();
+  renderOrderWorthPanel(rrForAdvice, { entry, sl, tp });
+}
+// Tells the trader which account type is being used for the lot-size math right
+// now, and how big 1.00 lot actually is on the pair they typed — this is what
+// was missing before, which is why $ figures didn't match hand-calculated ones.
+function updateOrderLotAcctHint(){
+  const hint = document.getElementById('orderLotAcctHint');
+  if(!hint) return;
+  const acctKey = state.rules.accountType || 'standard';
+  const acct = ACCOUNT_TYPES[acctKey] || ACCOUNT_TYPES.standard;
+  const pairEl = document.getElementById('o_pair');
+  const pair = pairEl ? pairEl.value : '';
+  const perLot = unitsPerStandardLot(pair) * acct.mult;
+  hint.textContent = `Using your ${acct.label} account — 1.00 lot = ${perLot.toLocaleString()} units on ${pair ? pair.toUpperCase() : 'this instrument'}. Change account type in Rule Builder.`;
 }
 // Is this trade actually worth taking, given the account balance, the rules
 // already saved in Rule Builder, and what's realistic for the chosen style?
-function renderOrderWorthPanel(rr){
+// levels (entry/sl/tp) + the o_lot field are used to compute the REAL $ risk
+// and reward from price distance x units-per-lot x lot size, when a lot size
+// is entered — falling back to the old risk-rule estimate only when it isn't.
+function renderOrderWorthPanel(rr, levels){
   const panel = document.getElementById('orderWorthPanel');
   if(!panel) return;
   const styleSel = document.getElementById('o_style');
@@ -4007,8 +4049,16 @@ function renderOrderWorthPanel(rr){
     return;
   }
   panel.style.display = '';
-  const dollarRisk = riskDollar(balance, riskPct);
-  const dollarReward = dollarRisk!=null ? +(dollarRisk*rr).toFixed(2) : null;
+  const pairEl = document.getElementById('o_pair');
+  const lotEl = document.getElementById('o_lot');
+  const pair = pairEl ? pairEl.value : '';
+  const lot = lotEl ? lotEl.value : '';
+  const acctType = state.rules.accountType || 'standard';
+  const actual = (levels && lot!=='') ? computeOrderMoney(levels.entry, levels.sl, levels.tp, pair, lot, acctType) : null;
+  const ruleDollarRisk = riskDollar(balance, riskPct);
+  const ruleDollarReward = ruleDollarRisk!=null ? +(ruleDollarRisk*rr).toFixed(2) : null;
+  const dollarRisk = (actual && actual.risk!=null) ? actual.risk : ruleDollarRisk;
+  const dollarReward = (actual && actual.reward!=null) ? actual.reward : ruleDollarReward;
   const returnPct = (dollarReward!=null && balance) ? (dollarReward/balance*100) : null;
 
   let tier, verdict, reasons = [];
@@ -4029,7 +4079,17 @@ function renderOrderWorthPanel(rr){
 
   let moneyLine = '';
   if(dollarRisk!=null && dollarReward!=null){
-    moneyLine = `<div class="check-item ${tier}"><span>${tier==='pass'?'&#10003;':tier==='warn'?'!':'&#10005;'}</span>Risking ${curSym()}${dollarRisk} to make ${curSym()}${dollarReward} on this account (${returnPct.toFixed(2)}% of balance) if it hits target.</div>`;
+    const basis = actual ? ` (exact, from your ${lot} lot on ${pair ? pair.toUpperCase() : 'this pair'})` : ` (estimated from your ${riskPct}% risk rule — add a lot size above for the exact figure)`;
+    moneyLine = `<div class="check-item ${tier}"><span>${tier==='pass'?'&#10003;':tier==='warn'?'!':'&#10005;'}</span>Risking ${curSym()}${dollarRisk} to make ${curSym()}${dollarReward} on this account (${returnPct.toFixed(2)}% of balance) if it hits target${basis}.</div>`;
+    if(actual && ruleDollarRisk!=null && actual.risk!=null && ruleDollarRisk>0){
+      const diffPct = Math.abs(actual.risk - ruleDollarRisk) / ruleDollarRisk;
+      if(diffPct > 0.15){
+        const overUnder = actual.risk > ruleDollarRisk ? 'more than' : 'less than';
+        reasons.push(`Your ${lot} lot actually risks ${curSym()}${actual.risk.toFixed(2)} on this account type — ${overUnder} the ${curSym()}${ruleDollarRisk} your ${riskPct}% risk rule allows. Resize the lot to stay inside your own rule.`);
+      }
+    }
+  } else if(lot===''){
+    moneyLine = `<div class="hint" style="margin:0 0 4px;">Add a lot size above to see the exact ${curSym()} risked and returned on this trade.</div>`;
   } else {
     moneyLine = `<div class="hint" style="margin:0 0 4px;">Set your account balance and risk % in Rule Builder to see the actual ${curSym()} risked and won on this trade.</div>`;
   }
