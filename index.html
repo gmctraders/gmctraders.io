@@ -1547,13 +1547,22 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
               </select>
             </div>
           </div>
-          <div class="field">
-            <label>Trading style <span class="hint-inline">how you're playing this</span></label>
-            <select id="o_style" onchange="updateOrderRRPreview()">
-              <option value="scalp">Scalp — seconds to minutes</option>
-              <option value="intraday" selected>Intraday — in and out same day</option>
-              <option value="swing">Swing — held days to weeks</option>
-            </select>
+          <div class="row2">
+            <div class="field">
+              <label>Trading style <span class="hint-inline">how you're playing this</span></label>
+              <select id="o_style" onchange="updateOrderRRPreview()">
+                <option value="scalp">Scalp — seconds to minutes</option>
+                <option value="intraday" selected>Intraday — in and out same day</option>
+                <option value="swing">Swing — held days to weeks</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Account <span class="hint-inline">whose rules apply</span></label>
+              <select id="o_account" onchange="onOrderAccountChange()">
+                <option value="personal">Personal</option>
+                <option value="propfirm">Prop Firm</option>
+              </select>
+            </div>
           </div>
           <div class="row3">
             <div class="field"><label>Entry price</label><input type="number" step="any" id="o_entry" placeholder="e.g. 1.0850" oninput="updateOrderRRPreview()"></div>
@@ -2487,13 +2496,19 @@ function applyDemoLocks(){
       gaBadge.remove();
     }
   }
-  // Order Book: pair / SL / TP / logic tags stay locked — reasoning goes in Notes instead.
-  ['o_pair','o_sl','o_tp'].forEach(id=>{
+  // Order Book: pair / SL / TP / logic tags / account stay locked — reasoning goes in Notes instead.
+  // Account is force-reset to Personal in demo since Prop Firm Compliance
+  // itself is a locked, real-account-only room (see DEMO_LOCKED_VIEWS) — a
+  // trial trader should never be able to route an order at a prop firm whose
+  // rules they can't even open to configure.
+  ['o_pair','o_sl','o_tp','o_account'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
+    if(id==='o_account' && isDemoMode) el.value = 'personal';
     const field = el.closest('.field');
     if(field) field.classList.toggle('field-locked', isDemoMode);
   });
+  updateOrderLotAcctHint();
   const logicGrid = document.getElementById('orderLogicChoices');
   if(logicGrid){
     const field = logicGrid.closest('.field');
@@ -2543,6 +2558,7 @@ function setupDemoFieldGuards(){
     { id:'o_pair', label:'Pair / Instrument' },
     { id:'o_sl', label:'Stop Loss' },
     { id:'o_tp', label:'Take Profit' },
+    { id:'o_account', label:'Account', msg:'Prop Firm accounts are configured in the Prop Firm Compliance room, which is for real accounts only — every Proving Ground order trades your personal $1,000 USD demo balance. It unlocks fully with real access.' },
     { id:'p_monk', label:'Monk Code' },
     { id:'g_currency', label:'Account currency', msg:accountLockCopy },
     { id:'g_accountBalance', label:'Account balance', msg:accountLockCopy },
@@ -3644,13 +3660,19 @@ async function savePropFirm(){
   await saveState();
   document.getElementById('pfSavedHint').textContent = 'Saved just now.';
   renderPropFirmCompliance();
+  renderOrderAccountOptions();
+  updateOrderRRPreview();
   showToast('Prop firm rules saved');
 }
 
 // Pulls every trade into per-day P/L buckets, sorted chronologically.
 function pfDailyPnlSeries(){
   const byDay = {};
-  filteredTrades().forEach(t=>{ byDay[t.date] = (byDay[t.date]||0) + pnlOf(t); });
+  // Only trades placed against the Prop Firm account (Order Book -> Account:
+  // Prop Firm) count toward challenge compliance — personal trades shouldn't
+  // be able to trip (or pad) a prop firm's daily loss / drawdown / profit
+  // target math.
+  filteredTrades().filter(t=>t.account==='propfirm').forEach(t=>{ byDay[t.date] = (byDay[t.date]||0) + pnlOf(t); });
   return Object.keys(byDay).sort().map(date=>({date, pnl: byDay[date]}));
 }
 
@@ -3714,6 +3736,19 @@ function computePropFirmMetrics(){
   };
 }
 
+// Live prop-firm account balance right now: starting balance plus every
+// prop-firm-tagged trade's P/L logged so far. Falls back to the starting
+// balance alone if no prop-firm trades exist yet, or null if Prop Firm
+// Compliance hasn't been configured at all. This is what the Order Book and
+// Log Trade forms use as "balance" whenever an order/trade is tagged Prop
+// Firm, so the $ figures stay true to the actual challenge account instead
+// of silently reusing the personal Rule Builder balance.
+function propFirmLiveBalance(){
+  const pf = state.propFirm;
+  if(!pf || !pf.startingBalance) return null;
+  const m = computePropFirmMetrics();
+  return m ? m.currentBalance : pf.startingBalance;
+}
 function pfBar(pct, tone){
   const clamped = Math.max(0, Math.min(100, pct));
   return `<div class="pf-track"><div class="pf-fill ${tone||''}" style="width:${clamped}%"></div></div>`;
@@ -3944,6 +3979,34 @@ function populateTradeSelectors(){
     oSSel.innerHTML = opts.join('');
     onOrderStrategyChange();
   }
+  renderOrderAccountOptions();
+}
+// Keeps the Order Book's Account selector in sync with whatever's actually
+// configured in Prop Firm Compliance — shows the real firm name once it's
+// saved so it's obvious which challenge the order is routed against, and
+// silently re-locks to Personal for trial accounts (Prop Firm Compliance is
+// a real-account-only room, so an order can never legitimately be tagged to
+// a prop firm a demo trader can't configure).
+function renderOrderAccountOptions(){
+  const sel = document.getElementById('o_account');
+  if(!sel) return;
+  const prevVal = sel.value || 'personal';
+  const pf = state.propFirm;
+  const pfLabel = pf && pf.firmName ? `Prop Firm — ${pf.firmName}` : 'Prop Firm';
+  sel.innerHTML = `<option value="personal">Personal</option><option value="propfirm">${escapeHtml(pfLabel)}</option>`;
+  sel.value = (!isDemoMode && prevVal==='propfirm') ? 'propfirm' : 'personal';
+  updateOrderLotAcctHint();
+}
+// Fired whenever the trader flips the Order Book between Personal and Prop
+// Firm — every downstream number (lot->units hint, "worth it?" advice, $
+// risk/reward) needs to immediately re-price against the right balance.
+function onOrderAccountChange(){
+  updateOrderLotAcctHint();
+  updateOrderRRPreview();
+}
+function orderAccountIsPropFirm(){
+  const sel = document.getElementById('o_account');
+  return !!sel && sel.value==='propfirm';
 }
 function onStrategyChange(){
   updateTradeRiskPreview();
@@ -4027,7 +4090,16 @@ function updateOrderLotAcctHint(){
   const pairEl = document.getElementById('o_pair');
   const pair = pairEl ? pairEl.value : '';
   const perLot = unitsPerStandardLot(pair) * acct.mult;
-  hint.textContent = `Using your ${acct.label} account — 1.00 lot = ${perLot.toLocaleString()} units on ${pair ? pair.toUpperCase() : 'this instrument'}. Change account type in Rule Builder.`;
+  const base = `Using your ${acct.label} account — 1.00 lot = ${perLot.toLocaleString()} units on ${pair ? pair.toUpperCase() : 'this instrument'}.`;
+  if(orderAccountIsPropFirm()){
+    const bal = propFirmLiveBalance();
+    const pf = state.propFirm;
+    hint.textContent = bal!=null
+      ? `${base} Priced against ${pf.firmName || 'your prop firm'}'s account (${curSym()}${bal.toFixed(0)}) — not your personal balance.`
+      : `${base} Set a starting balance in Prop Firm Compliance to price this against your challenge account.`;
+  } else {
+    hint.textContent = `${base} Change account type in Rule Builder.`;
+  }
 }
 // Is this trade actually worth taking, given the account balance, the rules
 // already saved in Rule Builder, and what's realistic for the chosen style?
