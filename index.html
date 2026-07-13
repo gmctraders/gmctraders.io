@@ -1787,6 +1787,16 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
           Over weeks and months this becomes a record you can't argue with &mdash; your discipline score, your rule violations, your real win rate under your own rules. It isn't here to flatter you. It's here to keep score honestly, so the next version of you trades better than the last.
         </p>
       </div>
+      <div class="card tilt" style="margin-top:18px;">
+        <h2>Request a <span class="accent">Review</span></h2>
+        <p style="color:var(--slate);line-height:1.7;margin:0 0 14px;">
+          Reviews normally pop up on their own at the start of a new week or month. Don't want to wait? Pull up the last completed week or month whenever you want an honest look at how you traded.
+        </p>
+        <div class="btn-row" style="gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="requestManualReview('weekly')">Review Last Week</button>
+          <button class="btn btn-ghost" onclick="requestManualReview('monthly')">Review Last Month</button>
+        </div>
+      </div>
       <div class="card tilt" style="margin-top:18px;border-color:rgba(244,63,94,0.3);">
         <h2 style="color:var(--loss-bright)">Danger Zone</h2>
         <p style="color:var(--slate);line-height:1.7;margin:0;">
@@ -2901,6 +2911,72 @@ function computePeriodStats(startIso, endIso){
     pnl, avgRR, bestDay, worstDay, ruleBrokenDays, activeDays: histInRange.length, avgDiscipline, moodRows };
 }
 
+/* Turns raw period stats into plain-language coaching feedback — what's working, what to fix. */
+function buildCoachingInsights(data){
+  const fixes = [];
+  const wins = [];
+
+  if(data.tradeCount===0) return { fixes, wins };
+
+  // Win rate
+  if(data.winRate < 40){
+    fixes.push(`Win rate was ${data.winRate}% — that's low enough to question entry criteria, not just execution. Before the next session, revisit what "A+ setup" actually means to you.`);
+  } else if(data.winRate >= 60){
+    wins.push(`Win rate held at ${data.winRate}% — your setup selection is doing its job.`);
+  }
+
+  // Risk:Reward
+  if(data.avgRR!=null){
+    if(data.avgRR < 1){
+      fixes.push(`Average R:R was only ${data.avgRR.toFixed(2)}. You're risking more than you're making per trade on average — winners are likely getting cut short, or losers are running too long.`);
+    } else if(data.avgRR >= 2){
+      wins.push(`Average R:R of ${data.avgRR.toFixed(2)} means your winners are doing real work relative to your risk. Keep letting them run.`);
+    }
+  }
+
+  // Discipline / rule adherence
+  if(data.activeDays>0){
+    const breakRate = data.ruleBrokenDays / data.activeDays;
+    if(breakRate > 0){
+      fixes.push(`Rules were broken on ${data.ruleBrokenDays} of ${data.activeDays} trading day${data.activeDays===1?'':'s'}. That's the fastest fix available to you — the plan only works if it's followed on the hard days, not just the easy ones.`);
+    } else {
+      wins.push(`Zero rule violations across ${data.activeDays} trading day${data.activeDays===1?'':'s'} — that consistency is worth more long-term than any single win.`);
+    }
+  }
+  if(data.avgDiscipline!=null && data.avgDiscipline < 70){
+    fixes.push(`Average discipline score was ${data.avgDiscipline}/100. Worth checking whether pre-trade checks are being rushed or skipped when a setup "feels" obvious.`);
+  }
+
+  // Mood-driven losses
+  if(data.moodRows && data.moodRows.length){
+    const losingMoods = data.moodRows.filter(m=>m.pnl<0);
+    if(losingMoods.length){
+      const worst = losingMoods[0];
+      const label = (worst.label||'').replace(/^\S+\s/,'');
+      fixes.push(`Trades placed while feeling "${label}" lost money this period (${worst.trades} trade${worst.trades===1?'':'s'}, ${worst.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(worst.pnl).toFixed(0)}). Consider a hard rule: no entries while in that state.`);
+    }
+    const bestMood = data.moodRows[data.moodRows.length-1];
+    if(bestMood && bestMood.pnl>0){
+      const label = (bestMood.label||'').replace(/^\S+\s/,'');
+      wins.push(`Best results came from trades placed while feeling "${label}" — that's the mental state worth protecting and returning to.`);
+    }
+  }
+
+  // Volatility between best/worst day — overtrading / revenge-trading signal
+  if(data.bestDay && data.worstDay && data.tradeCount>=3){
+    const swing = data.bestDay.pnl - data.worstDay.pnl;
+    if(data.worstDay.pnl < 0 && swing > Math.abs(data.worstDay.pnl)*1.5){
+      fixes.push(`The gap between your best day (+${curSym()}${Math.abs(data.bestDay.pnl).toFixed(0)}) and worst day (-${curSym()}${Math.abs(data.worstDay.pnl).toFixed(0)}) is wide. Worth checking whether the worst day involved sizing up or chasing after an earlier loss.`);
+    }
+  }
+
+  if(fixes.length===0 && wins.length===0){
+    wins.push(`Nothing alarming in the numbers this period — steady, unremarkable trading, which is usually a good sign.`);
+  }
+
+  return { fixes, wins };
+}
+
 let periodReviewQueue = [];
 
 function maybeShowPeriodicReview(){
@@ -2940,6 +3016,29 @@ function maybeShowPeriodicReview(){
   showNextPeriodReview();
 }
 
+/* Trader-initiated review — pulls up the last completed week/month on demand, independent of the auto-popup schedule. */
+function requestManualReview(kind){
+  const now = new Date();
+  let start, end, label;
+  if(kind==='monthly'){
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    start = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), 1);
+    end = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth()+1, 0);
+    label = monthLabel(prevMonthDate);
+  } else {
+    const thisMonday = mondayOf(now);
+    start = new Date(thisMonday); start.setDate(start.getDate()-7);
+    end = new Date(thisMonday); end.setDate(end.getDate()-1);
+    label = `Week of ${toIso(start)} – ${toIso(end)}`;
+  }
+  const data = computePeriodStats(toIso(start), toIso(end));
+  if(data.tradeCount===0){
+    showToast(`No trades logged for that ${kind==='monthly'?'month':'week'} yet.`);
+    return;
+  }
+  showPeriodReview(kind, label, data);
+}
+
 function showNextPeriodReview(){
   if(periodReviewQueue.length===0) return;
   const next = periodReviewQueue.shift();
@@ -2977,6 +3076,14 @@ function showPeriodReview(kind, label, data){
       <div style="font-size:12px;color:var(--slate);margin-bottom:6px;">How you traded, by emotional state</div>
       ${data.moodRows.map(m=>`<div class="check-item ${m.pnl>=0?'pass':'fail'}"><span>${m.pnl>=0?'✓':'✕'}</span>${m.label}: ${m.trades} trade${m.trades===1?'':'s'}, ${m.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(m.pnl).toFixed(0)}</div>`).join('')}
       ${worstMood.pnl<0 ? `<div class="ok-banner" style="border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);margin-top:10px;">Trades logged as "${worstMood.label.replace(/^\S+\s/,'')}" cost you ${worstMood.pnl>=0?('+'+curSym()):('-'+curSym())}${Math.abs(worstMood.pnl).toFixed(0)} this period. Worth watching.</div>` : ''}
+    </div>`;
+  }
+  const coaching = buildCoachingInsights(data);
+  if(coaching.wins.length || coaching.fixes.length){
+    html += `<div class="review-block">
+      <div style="font-size:12px;color:var(--slate);margin-bottom:6px;">Coach's Note — how you traded, and what to fix</div>
+      ${coaching.wins.map(w=>`<div class="check-item pass"><span>✓</span>${w}</div>`).join('')}
+      ${coaching.fixes.map(f=>`<div class="check-item fail"><span>✕</span>${f}</div>`).join('')}
     </div>`;
   }
   document.getElementById('periodReviewBody').innerHTML = html;
