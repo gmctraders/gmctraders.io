@@ -1911,7 +1911,7 @@ const SUPABASE_KEY = "sb_publishable_xSqC_Qa5UFZl9SzDmkTs0A_dNslQNGS";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_STATE = {
-  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null, currency:'USD' },
+  rules:{ maxDailyLoss:null, maxTrades:null, riskPerTrade:null, minRR:null, maxConsecLosses:null, accountBalance:null, coolingOffMinutes:null, maxRiskPerTrade:null, currency:'USD', accountType:'standard' },
   propFirm:{ firmName:'', phase:'challenge', startingBalance:null, profitTarget:null, maxDailyLossPct:null, maxOverallDrawdownPct:null, drawdownType:'static', minTradingDays:null, consistencyRulePct:null },
   session:{ start:"09:00", end:"11:00", restrict:false },
   psychology:{ why:"", monk:"", strategies:[], traders:[], orders:[], disciplineHistory:[], lastLossAt:null, preTradeCheckins:[], reviewsSeen:{ weekly:null, monthly:null } },
@@ -1961,6 +1961,46 @@ const CURRENCY_OPTIONS_HTML = Object.entries(CURRENCIES).map(([code,c])=>
   `<option value="${code}">${c.symbol} — ${c.name} (${code})</option>`).join('');
 function curSym(){ return (CURRENCIES[state.rules.currency] || CURRENCIES.USD).symbol; }
 function updateCurrencyLabels(){ document.querySelectorAll('.cur-sym').forEach(el=>el.textContent=curSym()); }
+
+/* ============ ACCOUNT TYPE / LOT SIZE MATH ============ */
+// "Standard" is the default and the reference point every other type is
+// defined against. Pro accounts trade the same 100k-unit contract as
+// Standard (Pro just usually means tighter spreads/commission, not a
+// different lot size) — Mini/Micro/Cent scale the contract down.
+// Real broker specs vary; this is a reasonable, clearly-labeled default that
+// the trader can always override by typing a different lot size.
+const ACCOUNT_TYPES = {
+  standard:{ label:'Standard', mult:1 },
+  pro:{      label:'Pro',      mult:1 },
+  mini:{     label:'Mini',     mult:0.1 },
+  micro:{    label:'Micro',    mult:0.01 },
+  cent:{     label:'Cent',     mult:0.01 }
+};
+function accountTypeLabel(key){ return (ACCOUNT_TYPES[key]||ACCOUNT_TYPES.standard).label; }
+// Units held per 1.00 lot on a Standard account, before the account-type
+// multiplier above is applied. Forex defaults to the usual 100,000-unit
+// contract; metals, crypto and index CFDs use their own conventions.
+function unitsPerStandardLot(pair){
+  const p = (pair||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(p==='XAUUSD') return 100;     // 100 oz per lot, gold convention
+  if(p==='XAGUSD') return 5000;    // 5,000 oz per lot, silver convention
+  if(p==='BTCUSD' || p==='ETHUSD') return 1; // 1 coin per lot
+  if(['US30','NAS100','SPX500','GER40','UK100'].includes(p)) return 1; // 1 index CFD unit per lot
+  return 100000; // standard FX contract
+}
+// Exact $ risk and $ reward for a given order: price distance x units-per-lot
+// (scaled for account type) x lot size. Returns null if there isn't enough
+// info yet (no entry/SL/TP or no lot).
+function computeOrderMoney(entry, sl, tp, pair, lot, accountType){
+  entry = parseFloat(entry); sl = parseFloat(sl); tp = parseFloat(tp); lot = parseFloat(lot);
+  if(isNaN(entry) || isNaN(lot) || lot<=0) return null;
+  const acct = ACCOUNT_TYPES[accountType] || ACCOUNT_TYPES.standard;
+  const units = unitsPerStandardLot(pair) * acct.mult * lot;
+  const risk = !isNaN(sl) ? +(Math.abs(entry-sl) * units).toFixed(2) : null;
+  const reward = !isNaN(tp) ? +(Math.abs(tp-entry) * units).toFixed(2) : null;
+  if(risk==null && reward==null) return null;
+  return { risk, reward };
+}
 // Fired the instant either currency dropdown changes, so every $ label and the
 // "at risk per trade" previews reflect the new currency immediately, without
 // waiting for a form save. Both dropdowns are kept in sync since there's only
