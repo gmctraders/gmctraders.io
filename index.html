@@ -1542,13 +1542,22 @@ textarea{resize:vertical;min-height:90px;line-height:1.6;}
               </select>
             </div>
           </div>
+          <div class="field">
+            <label>Trading style <span class="hint-inline">how you're playing this</span></label>
+            <select id="o_style" onchange="updateOrderRRPreview()">
+              <option value="scalp">Scalp — seconds to minutes</option>
+              <option value="intraday" selected>Intraday — in and out same day</option>
+              <option value="swing">Swing — held days to weeks</option>
+            </select>
+          </div>
           <div class="row3">
             <div class="field"><label>Entry price</label><input type="number" step="any" id="o_entry" placeholder="e.g. 1.0850" oninput="updateOrderRRPreview()"></div>
             <div class="field"><label>Stop loss</label><input type="number" step="any" id="o_sl" placeholder="e.g. 1.0820" oninput="updateOrderRRPreview()"></div>
             <div class="field"><label>Take profit</label><input type="number" step="any" id="o_tp" placeholder="e.g. 1.0910" oninput="updateOrderRRPreview()"></div>
           </div>
           <div class="hint calc" id="orderRRPreview" style="margin-bottom:10px;">Enter entry, stop loss and take profit to auto-calculate planned R:R.</div>
-          <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="auto-calculated, or set your own"></div>
+          <div class="field"><label>Planned R:R</label><input type="number" step="0.1" id="o_rr" placeholder="auto-calculated, or set your own" oninput="updateOrderRRPreview()"></div>
+          <div class="card tilt" id="orderWorthPanel" style="margin-bottom:16px;display:none;"></div>
           <div class="field">
             <label>Logic behind this order <span class="hint-inline">tap what applies</span></label>
             <div class="logic-check-grid" id="orderLogicChoices"></div>
@@ -2018,6 +2027,19 @@ function logicLabel(id){
   for(const t of Object.values(STRATEGY_TYPES)){ const f=t.logics.find(l=>l.id===id); if(f) return f.label; }
   return id;
 }
+
+/* ============ TRADE STYLES (scalp / intraday / swing) ============ */
+// Each style carries its own realistic R:R expectations. A 0.8R scalp can be a
+// perfectly good trade (you lean on a high win rate and volume), while a 0.8R
+// swing usually isn't worth tying up capital for days over.
+const TRADE_STYLES = {
+  scalp:    { label:'Scalp',    short:'SCALP', color:'#f5a623', good:0.8, warn:0.4,
+              blurb:'Scalps lean on a high win rate and fast turnaround more than a big reward — 0.5–1R is normal if your hit rate backs it up.' },
+  intraday: { label:'Intraday', short:'INTRADAY', color:'#2dd4bf', good:1.5, warn:1,
+              blurb:'Intraday setups carry it for hours, so they generally want at least 1–1.5R to be worth the screen time and spread.' },
+  swing:    { label:'Swing',    short:'SWING', color:'#10b981', good:2, warn:1.3,
+              blurb:'Swing trades tie up margin and carry overnight risk for days, so the reward needs to clear a higher bar — 2R or better.' }
+};
 function renderLogicChoices(containerId, type, preselected){
   preselected = preselected || [];
   const el = document.getElementById(containerId);
@@ -2995,11 +3017,25 @@ function computeRuleConfluence(v){
 
   if(v.riskPct!=null && v.riskPct>0){
     let fitness, tier, msg;
-    if(v.riskPct>=0.25 && v.riskPct<=2){ fitness=1; tier='pass'; msg=`Risk per trade (${v.riskPct}%) sits in a sustainable band.`; }
+    // A hard $ cap that's already reasonable relative to balance means risk %
+    // isn't the thing actually controlling downside - it's the cap. Large
+    // accounts especially can carry a higher risk % and still be fine in
+    // practice, so this shouldn't tank the score just because the % looks big.
+    const hasHardCap = !!(v.maxRiskPerTrade && v.balance && v.maxRiskPerTrade <= v.balance*0.03);
+    const isLargeAccount = !!(v.balance && v.balance>=50000);
+    if(v.riskPct>=0.25 && v.riskPct<=2.5){ fitness=1; tier='pass'; msg=`Risk per trade (${v.riskPct}%) sits in a sustainable band.`; }
     else if(v.riskPct<0.25){ fitness=0.6; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is very conservative - safe, but growth will be slow.`; }
-    else if(v.riskPct<=3){ fitness=0.55; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is on the high side - most traders who last run 0.5-2%.`; }
-    else { fitness=0.15; tier='fail'; msg=`Risk per trade (${v.riskPct}%) is steep - a short losing streak could do real damage.`; }
-    add(20, fitness, tier, msg);
+    else if(v.riskPct<=4){
+      if(hasHardCap || isLargeAccount){ fitness=0.8; tier='pass'; msg=`Risk per trade (${v.riskPct}%) is above the usual 0.5-2% guideline, but ${hasHardCap ? 'your hard $ risk cap already keeps single trades in check' : 'on an account this size that\'s a reasonable trade-off, not a red flag on its own'}.`; }
+      else { fitness=0.55; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is on the high side - most traders who last run 0.5-2%.`; }
+    }
+    else {
+      if(hasHardCap){ fitness=0.5; tier='warn'; msg=`Risk per trade (${v.riskPct}%) is steep on paper, but your hard $ risk cap is doing the real work of limiting a single loss.`; }
+      else { fitness=0.15; tier='fail'; msg=`Risk per trade (${v.riskPct}%) is steep - a short losing streak could do real damage.`; }
+    }
+    // Lower weight than before (was 20) - a single risk-% number shouldn't
+    // dominate the overall read when the rest of the rule set is solid.
+    add(12, fitness, tier, msg);
   }
 
   if(v.maxDailyLoss && v.balance && v.riskPct){
@@ -3792,15 +3828,73 @@ function updateOrderRRPreview(){
   const sl = parseFloat(document.getElementById('o_sl').value);
   const tp = parseFloat(document.getElementById('o_tp').value);
   if(!el || !rrInput) return;
+  let rr = null;
   if(isNaN(entry) || isNaN(sl) || isNaN(tp) || entry===sl){
     el.textContent = 'Enter entry, stop loss and take profit to auto-calculate planned R:R.';
+  } else {
+    const risk = Math.abs(entry - sl);
+    const reward = Math.abs(tp - entry);
+    rr = reward / risk;
+    el.textContent = `Risk ${risk.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Reward ${reward.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Planned ${rr.toFixed(2)} R`;
+    if(!rrInput.dataset.touched) rrInput.value = rr.toFixed(2);
+  }
+  // Fall back to whatever's actually sitting in the Planned R:R field (typed by
+  // hand, or auto-filled above) so the worth-it read reacts to manual edits too.
+  const rrForAdvice = rr!=null ? rr : (parseFloat(rrInput.value) || null);
+  renderOrderWorthPanel(rrForAdvice);
+}
+// Is this trade actually worth taking, given the account balance, the rules
+// already saved in Rule Builder, and what's realistic for the chosen style?
+function renderOrderWorthPanel(rr){
+  const panel = document.getElementById('orderWorthPanel');
+  if(!panel) return;
+  const styleSel = document.getElementById('o_style');
+  const style = styleSel ? styleSel.value : 'intraday';
+  const profile = TRADE_STYLES[style] || TRADE_STYLES.intraday;
+  const balance = state.rules.accountBalance;
+  const riskPct = state.rules.riskPerTrade;
+  const minRR = state.rules.minRR;
+  if(rr==null || isNaN(rr) || rr<=0){
+    panel.style.display = 'none';
+    panel.innerHTML = '';
     return;
   }
-  const risk = Math.abs(entry - sl);
-  const reward = Math.abs(tp - entry);
-  const rr = reward / risk;
-  el.textContent = `Risk ${risk.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Reward ${reward.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')} → Planned ${rr.toFixed(2)} R`;
-  if(!rrInput.dataset.touched) rrInput.value = rr.toFixed(2);
+  panel.style.display = '';
+  const dollarRisk = riskDollar(balance, riskPct);
+  const dollarReward = dollarRisk!=null ? +(dollarRisk*rr).toFixed(2) : null;
+  const returnPct = (dollarReward!=null && balance) ? (dollarReward/balance*100) : null;
+
+  let tier, verdict, reasons = [];
+  if(minRR && rr < minRR){
+    tier = 'fail'; verdict = 'Not worth it — breaks your rule';
+    reasons.push(`This is ${rr.toFixed(2)}R, under the ${minRR}R minimum you set in Rule Builder. Taking it means trading outside your own plan.`);
+  } else if(rr >= profile.good){
+    tier = 'pass'; verdict = 'Worth it';
+    reasons.push(`${rr.toFixed(2)}R clears the ${profile.good}R+ bar that makes a ${profile.label.toLowerCase()} trade worth the risk.`);
+  } else if(rr >= profile.warn){
+    tier = 'warn'; verdict = 'Marginal — lean on your edge';
+    reasons.push(`${rr.toFixed(2)}R is below the ${profile.good}R you'd ideally want on a ${profile.label.toLowerCase()}, but still workable if your win rate on this setup supports it.`);
+  } else {
+    tier = 'fail'; verdict = 'Not worth it';
+    reasons.push(`${rr.toFixed(2)}R is thin even for a ${profile.label.toLowerCase()} — you'd need an unusually high win rate just to break even on this setup.`);
+  }
+  reasons.push(profile.blurb);
+
+  let moneyLine = '';
+  if(dollarRisk!=null && dollarReward!=null){
+    moneyLine = `<div class="check-item ${tier}"><span>${tier==='pass'?'&#10003;':tier==='warn'?'!':'&#10005;'}</span>Risking ${curSym()}${dollarRisk} to make ${curSym()}${dollarReward} on this account (${returnPct.toFixed(2)}% of balance) if it hits target.</div>`;
+  } else {
+    moneyLine = `<div class="hint" style="margin:0 0 4px;">Set your account balance and risk % in Rule Builder to see the actual ${curSym()} risked and won on this trade.</div>`;
+  }
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+      <h2 style="margin:0;">Is this trade <span class="accent">worth it?</span></h2>
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;color:${tier==='pass'?'var(--win-bright)':tier==='warn'?'var(--amber)':'var(--loss-bright)'}">${verdict}</div>
+    </div>
+    ${moneyLine}
+    ${reasons.map(r=>`<div class="check-item ${tier}"><span>${tier==='pass'?'&#10003;':tier==='warn'?'!':'&#10005;'}</span>${escapeHtml(r)}</div>`).join('')}
+  `;
 }
 
 /* ============ JOURNAL ============ */
@@ -4669,7 +4763,7 @@ async function submitTrade(){
 
   const closingOrder = closingOrderId ? state.psychology.orders.find(o=>o.id===closingOrderId) : null;
   state.trades.push({ id: Date.now(), date: todayStr(), time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), result, rr: rr || null, notes, lossAmount: result==='loss' ? lossAmount : 0, winAmount: result==='win' ? winAmount : 0, trader, strategy, strategyType, logics, mood: selectedMood,
-    pair: closingOrder ? closingOrder.pair : null, entry: closingOrder ? closingOrder.entry : null, sl: closingOrder ? closingOrder.sl : null, tp: closingOrder ? closingOrder.tp : null });
+    pair: closingOrder ? closingOrder.pair : null, entry: closingOrder ? closingOrder.entry : null, sl: closingOrder ? closingOrder.sl : null, tp: closingOrder ? closingOrder.tp : null, style: closingOrder ? closingOrder.style : null });
   state.day.tradesCount += 1;
   if(result==='loss'){ state.day.lossUsed += lossAmount; state.consecutiveLosses += 1; state.psychology.lastLossAt = Date.now(); } else { state.consecutiveLosses = 0; }
   archiveDisciplineDay(state.day.date, computeDisciplineScore());
@@ -4706,6 +4800,7 @@ async function placeOrder(){
   const strategyType = stratObj ? stratObj.type : null;
   const pair = document.getElementById('o_pair').value.trim();
   const direction = document.getElementById('o_direction').value;
+  const style = document.getElementById('o_style') ? document.getElementById('o_style').value : 'intraday';
   const entry = document.getElementById('o_entry').value;
   const sl = document.getElementById('o_sl').value;
   const tp = document.getElementById('o_tp').value;
@@ -4715,7 +4810,7 @@ async function placeOrder(){
   const now = new Date();
   state.psychology.orders.push({
     id:'ord_'+Date.now(), date:todayStr(), time:now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
-    trader, strategy, strategyType, logics, pair: pair || null, direction,
+    trader, strategy, strategyType, style, logics, pair: pair || null, direction,
     entry: entry!=='' ? parseFloat(entry) : null, sl: sl!=='' ? parseFloat(sl) : null, tp: tp!=='' ? parseFloat(tp) : null,
     rrPlanned: rrPlanned || null, notes, status:'pending'
   });
@@ -4726,6 +4821,8 @@ async function placeOrder(){
   document.getElementById('o_rr').value=''; document.getElementById('o_rr').dataset.touched='';
   document.getElementById('o_notes').value='';
   document.getElementById('orderRRPreview').textContent = 'Enter entry, stop loss and take profit to auto-calculate planned R:R.';
+  const worthPanel = document.getElementById('orderWorthPanel');
+  if(worthPanel){ worthPanel.style.display = 'none'; worthPanel.innerHTML=''; }
   renderLogicChoices('orderLogicChoices', stratObj ? stratObj.type : null, []);
   await saveState(); renderOrders();
   showToast('Order placed — close it out once you know the result');
@@ -4742,6 +4839,7 @@ function renderOrders(){
   }
   list.innerHTML = orders.map(o=>{
     const typeInfo = STRATEGY_TYPES[o.strategyType];
+    const styleInfo = TRADE_STYLES[o.style];
     const hasLevels = o.entry!=null || o.sl!=null || o.tp!=null;
     return `
     <div class="order-row">
@@ -4761,6 +4859,7 @@ function renderOrders(){
       </div>` : ''}
       <div class="trade-tags">
         <span class="tag-chip trader">${escapeHtml(traderName(o.trader))}</span>
+        ${styleInfo ? `<span class="tag-chip" style="color:${styleInfo.color}">${styleInfo.short}</span>` : ''}
         ${typeInfo ? `<span class="tag-chip" style="color:${typeInfo.color}">${typeInfo.short}</span>` : ''}
         ${o.strategy ? `<span class="tag-chip">${escapeHtml(strategyName(o.strategy)||'—')}</span>` : ''}
         ${(o.logics||[]).map(id=>`<span class="tag-chip">${escapeHtml(logicLabel(id))}</span>`).join('')}
